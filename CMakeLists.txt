@@ -55,7 +55,6 @@ find_package(Kopete REQUIRED)
 #KDE4_NO_ENABLE_FINAL(kopete)
 
 
-
 # Generate config-kopete.h
 #configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config-kopete.h.cmake ${CMAKE_CURRENT_BINARY_DIR}/config-kopete.h )
 
@@ -121,8 +120,11 @@ if(NOT DISABLE_VIDEOSUPPORT)
   target_link_libraries(kopete_webqq kopete_videodevice)
 endif(NOT DISABLE_VIDEOSUPPORT)
 
+#Urgly!!!
+set(PLUGIN_INSTALL_DIR "/usr/lib/kde4/")
+set(SERVICES_INSTALL_DIR "/usr/share/kde4/services/")
+ 
 install(TARGETS kopete_webqq  DESTINATION ${PLUGIN_INSTALL_DIR})
-
 
 ########### install files ###############
 
