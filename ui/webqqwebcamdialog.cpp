@@ -13,7 +13,7 @@
     *                                                                       *
     *************************************************************************
 */
-
+#if 0
 #include "webqqwebcamdialog.h"
 #include <webcamwidget.h>
 #ifndef VIDEOSUPPORT_DISABLED
@@ -93,5 +93,5 @@ void WebqqWebcamDialog::slotUpdateImage()
 #endif
 }
 
-
+#endif 
 #include "webqqwebcamdialog.moc"

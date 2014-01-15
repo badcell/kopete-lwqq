@@ -81,5 +81,5 @@ target_link_libraries(lwqq
 
 if(LWQQ_INSTALL)
 INSTALL(TARGETS lwqq DESTINATION lib)
-INSTALL(FILES ${LWQQ_HEADER} DESTINATION include/lwqq)
+#INSTALL(FILES ${LWQQ_HEADER} DESTINATION include/lwqq)
 endif()

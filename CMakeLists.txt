@@ -1,5 +1,13 @@
 project(kopete-lwqq)
 
+set(CMAKE_MODULE_PATH 
+    ${CMAKE_SOURCE_DIR}/cmake/modules
+    ${CMAKE_SOURCE_DIR}/liblwqq/cmake
+    ${CMAKE_MODULE_PATH}
+)
+
+add_subdirectory( liblwqq )
+
 find_package(KDE4 REQUIRED)
 
 include(KDE4Defaults)
@@ -12,6 +20,10 @@ include(CheckFunctionExists)
 include(CheckLibraryExists)
 include(CheckPrototypeExists)
 include(CheckTypeSize)
+
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(LIBJS REQUIRED mozjs185)
+
 
 set(CMAKE_REQUIRED_DEFINITIONS ${_KDE4_PLATFORM_DEFINITIONS})
 set(CMAKE_CXX_FLAGS "-fpermissive")
@@ -33,13 +45,11 @@ add_definitions(${QT_DEFINITIONS} ${QT_QTDBUS_DEFINITIONS} ${KDE4_DEFINITIONS})
 add_definitions(-DQT_USE_FAST_CONCATENATION -DQT_USE_FAST_OPERATOR_PLUS)
 include_directories(${CMAKE_SOURCE_DIR} ${CMAKE_BINARY_DIR} ${KDE4_INCLUDES})
 
-set(KOPETE_SOURCE_DIR /home/zzg/work/kopete-4.11.4/)
-
-set(KOPETE_BINARY_DIR /home/zzg/work/build-kopete/)
 
 set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules ${CMAKE_MODULE_PATH} )
 
 
+find_package(Kopete REQUIRED)
 
 
 #KDE4_NO_ENABLE_FINAL(kopete)
@@ -52,19 +62,6 @@ set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules ${CMAKE_MODULE_P
 # For config-kopete.h
 #include_directories( ${CMAKE_CURRENT_BINARY_DIR} )
 
-set(KOPETE_INCLUDES 
-	${KDE4_INCLUDES}
-        ${KDEPIMLIBS_INCLUDE_DIRS}
-	${KOPETE_SOURCE_DIR}/libkopete/
-	${KOPETE_BINARY_DIR}/libkopete/
-	${KOPETE_SOURCE_DIR}/libkopete/ui/
-	${KOPETE_SOURCE_DIR}/libkopete/private/
-	${KOPETE_SOURCE_DIR}/libkopete/contactlist/
-	${KOPETE_SOURCE_DIR}/libkopete/tasks/
-)
-
-
-
 link_directories( 
 ${KOPETE_BINARY_DIR}/lib
 )
@@ -72,11 +69,12 @@ ${KOPETE_BINARY_DIR}/lib
 
 
 add_subdirectory( icons ) 
-#add_subdirectory( liblwqq )
 
 
 include_directories( 
-${KOPETE_INCLUDES} 
+#${KOPETE_INCLUDES}
+${KOPETE_INCLUDE_DIRS} 
+${KOPETE_INCLUDE_DIRS}/ui/
 ${CMAKE_CURRENT_SOURCE_DIR}/ui/ 
 ${CMAKE_CURRENT_SOURCE_DIR}/liblwqq/lib/
 )
@@ -117,7 +115,8 @@ webqquserinfoform.ui
 kde4_add_plugin(kopete_webqq ${kopete_webqq_PART_SRCS})
 
 
-target_link_libraries(kopete_webqq ${KDE4_KIO_LIBS} kopete  pthread lwqq sqlite3 z curl mozjs185 ev)
+#target_link_libraries(kopete_webqq ${KDE4_KIO_LIBS} kopete  pthread lwqq sqlite3 z curl ${LIBJS_LIBRARIES} ${EV_LIBRARIES})
+target_link_libraries(kopete_webqq ${KDE4_KIO_LIBS} kopete  lwqq ${LIBJS_LIBRARIES})
 if(NOT DISABLE_VIDEOSUPPORT)
   target_link_libraries(kopete_webqq kopete_videodevice)
 endif(NOT DISABLE_VIDEOSUPPORT)

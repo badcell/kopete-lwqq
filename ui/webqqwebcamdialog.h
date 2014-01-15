@@ -13,7 +13,7 @@
     *                                                                       *
     *************************************************************************
 */
-
+#if 0
 #ifndef TESTBEDWEBCAMDIALOG_H
 #define TESTBEDWEBCAMDIALOG_H
 
@@ -56,4 +56,5 @@ private:
 	Kopete::AV::VideoDevicePool *mVideoDevicePool;
 };
 
+#endif
 #endif

@@ -1201,8 +1201,8 @@ void WebqqAccount::slotShowVideo ()
 
 	if (isConnected ())
 	{
-		WebqqWebcamDialog *webqqWebcamDialog = new WebqqWebcamDialog(0, 0);
-		Q_UNUSED(webqqWebcamDialog);
+		//WebqqWebcamDialog *webqqWebcamDialog = new WebqqWebcamDialog(0, 0);
+		//Q_UNUSED(webqqWebcamDialog);
 	}
 	//updateContactStatus();
 }

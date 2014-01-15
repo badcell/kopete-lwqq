@@ -12,5 +12,5 @@ target_link_libraries(lwqq-cli
     )
 
 if(LWQQ_INSTALL)
-INSTALL(TARGETS lwqq-cli DESTINATION bin)
+#INSTALL(TARGETS lwqq-cli DESTINATION bin)
 endif()
