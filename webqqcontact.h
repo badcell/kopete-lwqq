@@ -24,7 +24,8 @@
 
 #include "kopetecontact.h"
 #include "kopetemessage.h"
-
+#include "kopetechatsession.h"
+#include "qq_types.h"
 class KAction;
 class KActionCollection;
 namespace Kopete { class Account; }
@@ -77,7 +78,14 @@ public:
 	void setDisplayPicture(const QByteArray &data);
 	
 	int qq_send_im( const char *who, const char *what);
-	
+    int qq_send_chat(const char *gid, const char *message);
+    void setContactType(int type);
+    void webqq_addcontacts(Kopete::Contact *others);
+    /*
+     * Returns a contact of name @p id
+     */
+
+
 public slots:
 	/**
 	 * Transmits an outgoing message to the server 
@@ -109,6 +117,7 @@ protected:
 	KActionCollection* m_actionCollection;
 	Type m_type;
 	KAction* m_actionPrefs;
+    int m_contactType;
 };
 
 #endif

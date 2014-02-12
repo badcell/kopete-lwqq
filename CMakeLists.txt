@@ -71,7 +71,7 @@ add_subdirectory( icons )
 
 
 include_directories( 
-#${KOPETE_INCLUDES}
+#kopete
 ${KOPETE_INCLUDE_DIRS} 
 ${KOPETE_INCLUDE_DIRS}/ui/
 ${CMAKE_CURRENT_SOURCE_DIR}/ui/ 

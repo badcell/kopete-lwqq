@@ -633,7 +633,7 @@ static void check_multi_info(GLOBAL *g)
             req_ = (LwqqHttpRequest_*) req;
             ev = conn->event;
             if(ret != 0){
-                lwqq_log(LOG_WARNING,"async retcode:%d\n",ret);
+                //lwqq_log(LOG_WARNING,"async retcode:%d\n",ret);
             }
             if(ret != CURLE_OK){
                 LwqqErrorCode ec;

@@ -41,8 +41,8 @@ namespace Kopete
 }
 
 class WebqqProtocol;
-
-
+class QByteArray;
+class WebqqContact;
 /**
  * This represents an account connected to the webqq
  * @author Will Stephenson
@@ -85,6 +85,8 @@ public:
 	 * got a message, then send it to contact
 	 */
 	void buddy_message(LwqqClient* lc,LwqqMsgMessage* msg);
+    void group_message(LwqqClient* lc,LwqqMsgMessage* msg);
+    WebqqContact *contact(const QString &id);
 public slots:
 	/**
 	 * Called by the server when it has a message for us.
@@ -112,6 +114,7 @@ public slots:
 	void ac_login_stage_3(LwqqClient* lc);
 	void ac_login_stage_f(LwqqClient* lc);
 	void ac_friend_avatar(LwqqClient *lc, LwqqBuddy *buddy);
+    void ac_group_avatar(LwqqClient *lc, LwqqGroup *group);
 	void ac_qq_msg_check(LwqqClient *lc);
 	
 	void slotReceivedInstanceSignal(CallbackObject cb);
@@ -174,7 +177,7 @@ private:
     WebqqProtocol *m_protocol;
     
     QTimer *pollTimer;
-
+    QByteArray avatarData;
     /*called by login stage1*/
     //void login_stage_2(LwqqAsyncEvent* ev,LwqqClient* lc);
 };
@@ -185,6 +188,7 @@ static void cb_login_stage_2(LwqqAsyncEvent* event,LwqqClient* lc);
 static void cb_login_stage_3(LwqqClient* lc);
 static void cb_login_stage_f(LwqqClient* lc);
 static void cb_friend_avatar(LwqqClient *lc, LwqqBuddy *buddy);
+static void cb_group_avatar(LwqqClient *lc, LwqqGroup *group);
 static void cb_qq_msg_check(LwqqClient* lc);
 
 static void cb_friend_come(LwqqClient* lc,LwqqBuddy* buddy);
