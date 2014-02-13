@@ -112,7 +112,7 @@ Kopete::ChatSession* WebqqContact::manager( CanCreateFlags canCreateFlags )
 
 void WebqqContact::webqq_addcontacts(Kopete::Contact *others)
 {
-    manager()->addContact(others);
+    manager(CanCreate)->addContact(others);
 }
 
 

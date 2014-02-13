@@ -6,7 +6,8 @@
 #include "translate.h"
 #include "trex.h"
 #include "qq_types.h"
-
+#include <ktemporaryfile.h>
+#include <QString>
 #ifndef INST_PREFIX
 #define INST_PREFIX "/usr"
 #endif
@@ -385,7 +386,7 @@ char* translate_to_html_symbol(const char* s)
 void translate_struct_to_message(qq_account* ac, LwqqMsgMessage* msg, char* buf)
 {
     LwqqMsgContent* c;
-    char piece[24] = {0};
+    char piece[48] = {0};
     if(lwqq_bit_get(msg->f_style,LWQQ_FONT_BOLD)) strcat(buf,"<b>");
     if(lwqq_bit_get(msg->f_style,LWQQ_FONT_ITALIC)) strcat(buf,"<i>");
     if(lwqq_bit_get(msg->f_style,LWQQ_FONT_UNDERLINE)) strcat(buf,"<u>");
@@ -403,6 +404,7 @@ void translate_struct_to_message(qq_account* ac, LwqqMsgMessage* msg, char* buf)
     strcat(buf,">");
     
     TAILQ_FOREACH(c, &msg->content, entries) {
+        fprintf(stderr, "msg type:%d####################################\n", c->type);
         switch(c->type){
             case LWQQ_CONTENT_STRING:
                 paste_content_string(c->data.str,buf+strlen(buf));
@@ -410,32 +412,66 @@ void translate_struct_to_message(qq_account* ac, LwqqMsgMessage* msg, char* buf)
             case LWQQ_CONTENT_FACE:
                 strcat(buf,translate_smile(c->data.face));
                 break;
-#if 0
+#if 1
             case LWQQ_CONTENT_OFFPIC:
+                fprintf(stderr,"pic size:%d, file path:%s\n", c->data.img.size, c->data.img.file_path);
                 if(c->data.img.size>0){
-                    int img_id = purple_imgstore_add_with_id(c->data.img.data,c->data.img.size,NULL);
+                    KTemporaryFile *inkImage = new KTemporaryFile();
+                    inkImage->setPrefix("chatgif-");
+                    inkImage->setSuffix(".gif");
+                    inkImage->open();
+                    inkImage->write(c->data.img.data, c->data.img.size);
+                    inkImage->close();
+                    //int img_id = purple_imgstore_add_with_id(c->data.img.data,c->data.img.size,NULL);
                     //let it freed by purple
                     c->data.img.data = NULL;
                     //make it room to change num if necessary.
-                    snprintf(piece,sizeof(piece),"<IMG ID=\"%4d\">",img_id);
+                    snprintf(piece,sizeof(piece),"<img src=\"%s\" />",inkImage->fileName().toUtf8().constData());
+                    fprintf(stderr, "url:%s\n", inkImage->fileName().toUtf8().constData());
                     strcat(buf,piece);
                 }else{
-                    strcat(buf,_("【PIC】"));
+                    if((msg->super.super.type==LWQQ_MS_GROUP_MSG&&ac->flag&NOT_DOWNLOAD_GROUP_PIC)){
+                        strcat(buf,_("【DISABLE PIC】"));
+                    }
+//                    else if(c->data.img.url){
+//                        format_append(buf, "<a href=\"%s\">%s</a>",
+//                                c->data.img.url,
+//                                _("【PIC】")
+//                                );
+//                    }
+                    else{
+                        strcat(buf,_("【PIC NOT FOUND】"));
+                    }
                 }
                 break;
-            case LWQQ_CONTENT_CFACE:
-                if(c->data.cface.size>0){
-                    int img_id = purple_imgstore_add_with_id(c->data.cface.data,c->data.cface.size,NULL);
-                    //let it freed by purple
-                    c->data.cface.data = NULL;
-                    snprintf(piece,sizeof(piece),"<IMG ID=\"%4d\">",img_id);
-                    strcat(buf,piece);
-                }else if(c->data.cface.direct_url){
-                    format_append(buf,"<IMG SRC=\"%s\">",c->data.cface.direct_url);
-                }else{
-                    strcat(buf,(msg->super.super.type==LWQQ_MS_GROUP_MSG&&ac->flag&NOT_DOWNLOAD_GROUP_PIC)?
-                            _("【DISABLE PIC】"):_("【PIC】"));
+        case LWQQ_CONTENT_CFACE:
+            if(c->data.cface.size>0){
+                KTemporaryFile *inkImage = new KTemporaryFile();
+                inkImage->setPrefix("chatgif-");
+                inkImage->setSuffix(".gif");
+                inkImage->open();
+                inkImage->write(c->data.img.data, c->data.img.size);
+                inkImage->close();
+                //let it freed by purple
+                c->data.cface.data = NULL;
+                snprintf(piece,sizeof(piece),"<img src=\"%s\"/>",inkImage->fileName().toUtf8().constData());
+                strcat(buf,piece);
+            }else if(c->data.cface.direct_url){
+                format_append(buf,"<IMG SRC=\"%s\">",c->data.cface.direct_url);
+            }else{
+                if((msg->super.super.type==LWQQ_MS_GROUP_MSG&&ac->flag&NOT_DOWNLOAD_GROUP_PIC)){
+                    strcat(buf,_("【DISABLE PIC】"));
                 }
+//                else if(c->data.cface.url){
+//                    format_append(buf, "<a href=\"%s\">%s</a>",
+//                                  c->data.cface.url,
+//                                  _("【PIC】")
+//                                  );
+//                }
+                else{
+                    strcat(buf,_("【PIC NOT FOUND】"));
+                }
+            }
                 break;
 #endif
         }

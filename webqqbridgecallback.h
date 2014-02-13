@@ -17,7 +17,7 @@ typedef enum  {
   FRIEND_AVATAR, /*call ac_friend_avatar(LwqqClient* lc, LwqqBuddy *buddy)*/
   GROUP_AVATAR,/*call ac_group_avatar(LwqqClient* lc, LwqqGroup *group)*/
   QQ_MSG_CHECK,/*call ac_qq_msg_check(LwqqClient* lc)*/
-  
+  GROUP_MEMBERS,/*call ac_group_members(LwqqClient* lc, LwqqGroup *group)*/
   
 }CallbackFunctionType;
 

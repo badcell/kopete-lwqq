@@ -115,6 +115,7 @@ public slots:
 	void ac_login_stage_f(LwqqClient* lc);
 	void ac_friend_avatar(LwqqClient *lc, LwqqBuddy *buddy);
     void ac_group_avatar(LwqqClient *lc, LwqqGroup *group);
+    void ac_group_members(LwqqClient *lc, LwqqGroup *group);
 	void ac_qq_msg_check(LwqqClient *lc);
 	
 	void slotReceivedInstanceSignal(CallbackObject cb);
@@ -189,6 +190,7 @@ static void cb_login_stage_3(LwqqClient* lc);
 static void cb_login_stage_f(LwqqClient* lc);
 static void cb_friend_avatar(LwqqClient *lc, LwqqBuddy *buddy);
 static void cb_group_avatar(LwqqClient *lc, LwqqGroup *group);
+static void cb_group_members(LwqqClient *lc, LwqqGroup *group);
 static void cb_qq_msg_check(LwqqClient* lc);
 
 static void cb_friend_come(LwqqClient* lc,LwqqBuddy* buddy);
