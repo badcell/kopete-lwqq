@@ -91,6 +91,9 @@ set(kopete_webqq_PART_SRCS
    webqqbridgecallback.cpp
    webqqloginverifywidget.cpp
    webqquserinfoform.cpp
+   webqqchatsession.cpp
+   webqqdiscuchatsession.cpp
+   webqqgroupchatsession.cpp
    js.cpp
    translate.cpp
    trex.cpp
@@ -129,3 +132,4 @@ install(TARGETS kopete_webqq  DESTINATION ${PLUGIN_INSTALL_DIR})
 ########### install files ###############
 
 install( FILES kopete_webqq.desktop  DESTINATION ${SERVICES_INSTALL_DIR})
+install( FILES webqqdiscuui.rc webqqchatui.rc webqqgroupui.rc  DESTINATION ${DATA_INSTALL_DIR}/kopete_webqq)

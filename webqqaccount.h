@@ -174,7 +174,7 @@ private:
     
     Kopete::OnlineStatus m_targetStatus; 
     /* lwqq async option */
-    LwqqAction m_async_opt; 
+    LwqqAction m_async_opt;
     WebqqProtocol *m_protocol;
     
     QTimer *pollTimer;

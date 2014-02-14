@@ -73,3 +73,16 @@ webqqaccountpreferences.ui
 webqqaddui.ui
 webqqloginverify.ui
 webqquserinfoform.ui
+liblwqq/lib/lwqq.h
+webqqdiscuui.rc
+lwqq.files
+webqqconferenceui.rc
+webqqdiscuchatsession.h
+webqqdiscuchatsession.cpp
+webqqchatui.rc
+webqqchatsession.h
+webqqchatsession.cpp
+webqqgroupchatsession.h
+webqqgroupchatsession.cpp
+webqqchatui.rc
+webqqgroupui.rc

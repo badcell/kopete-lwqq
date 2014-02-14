@@ -1041,7 +1041,7 @@ void WebqqAccount::group_come(LwqqClient* lc,LwqqGroup* group)
     }
     addContact( QString(group->gid), displayName,  targetGroup, Kopete::Account::ChangeKABC );
     WebqqContact * addedContact = dynamic_cast<WebqqContact *>(contacts().value( QString(group->gid) ));
-    addedContact->setContactType(0);
+    addedContact->setContactType(WebqqContact::Contact_Group);
 
 
 //    if(group->type == 0)

@@ -25,6 +25,9 @@
 #include "kopetecontact.h"
 #include "kopetemessage.h"
 #include "kopetechatsession.h"
+#include "webqqchatsession.h"
+#include "webqqgroupchatsession.h"
+#include "webqqdiscuchatsession.h"
 #include "qq_types.h"
 class KAction;
 class KActionCollection;
@@ -43,6 +46,7 @@ public:
 	 * The range of possible contact types
 	 */
 	enum Type { Null, Echo, Group };
+    enum ConType { Contact_Chat, Contact_Group, Contact_Discu};
 
 	WebqqContact( Kopete::Account* _account, const QString &uniqueName, 
 			const QString &displayName, 
@@ -67,7 +71,8 @@ public:
 	virtual Kopete::ChatSession *manager( CanCreateFlags canCreate = CannotCreate );
 
 	virtual void slotUserInfo();
-	
+    void imageContact();
+    void buzzContact();
 	/**
 	 * Set the Type of this contact
 	 */
@@ -79,7 +84,7 @@ public:
 	
 	int qq_send_im( const char *who, const char *what);
     int qq_send_chat(const char *gid, const char *message);
-    void setContactType(int type);
+    void setContactType(ConType type);
     void webqq_addcontacts(Kopete::Contact *others);
     /*
      * Returns a contact of name @p id
@@ -109,15 +114,19 @@ protected slots:
 	 * destroyed - probably by the chatwindow being closed
 	 */
 	void slotChatSessionDestroyed();
-	
+private slots:
+    void slotTyping( bool );
 protected:
-	Kopete::ChatSession* m_msgManager;
-	
+    WebqqChatSession* m_chatManager;
+    WebqqGroupChatSession* m_groupManager;
+    WebqqDiscuChatSession* m_discuManager;
 	
 	KActionCollection* m_actionCollection;
 	Type m_type;
 	KAction* m_actionPrefs;
-    int m_contactType;
+    ConType m_contactType;
+    QString m_displayName;
+    QString m_userId;
 };
 
 #endif
