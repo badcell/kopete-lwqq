@@ -19,12 +19,14 @@
 #include <kdebug.h>
 #include <klocale.h>
 #include <kcomponentdata.h>
+#include <kaction.h>
 
 #include <kopetecontactlist.h>
 #include <kopetecontact.h>
 #include <kopetechatsessionmanager.h>
 #include <kopeteuiglobal.h>
 #include <kopetemessage.h>
+#include <kactioncollection.h>
 #include "kopeteprotocol.h"
 #include "webqqgroupchatsession.h"
 #include "webqqcontact.h"
@@ -36,6 +38,19 @@ WebqqGroupChatSession::WebqqGroupChatSession( Kopete::Protocol *protocol, const 
 {
 	Kopete::ChatSessionManager::self()->registerChatSession( this );
 	setComponentData(protocol->componentData());
+    KAction *buzzAction = new KAction( KIcon("bell"), i18n( "Buzz Contact" ), this );
+        actionCollection()->addAction( "WebqqBuzz", buzzAction );
+    //buzzAction->setShortcut( KShortcut("Ctrl+G") );
+    //connect( buzzAction, SIGNAL(triggered(bool)), this, SLOT(slotBuzzContact()) );
+
+    KAction *imageAction = new KAction( KIcon("image"), i18n( "Image send" ), this );
+        actionCollection()->addAction( "Webqqimage", imageAction );
+    //buzzAction->setShortcut( KShortcut("Ctrl+G") );
+    //connect( imageAction, SIGNAL(triggered(bool)), this, SLOT(slotimageContact()) );
+
+    KAction *userInfoAction = new KAction( KIcon("help-about"), i18n( "Show User Info" ), this );
+        actionCollection()->addAction( "WebqqShowInfo",  userInfoAction) ;
+    //connect( userInfoAction, SIGNAL(triggered(bool)), this, SLOT(slotUserInfo()) );
     setXMLFile("webqqgroupui.rc");
 }
 
@@ -55,7 +70,7 @@ void WebqqGroupChatSession::removeAllContacts()
 
 void WebqqGroupChatSession::setTopic( const QString &topic )
 {
-    setDisplayName(topic);
+    setDisplayName(i18n("%1", topic));
 }
 
 WebqqAccount *WebqqGroupChatSession::account()

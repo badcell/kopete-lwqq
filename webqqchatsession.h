@@ -30,7 +30,7 @@ class WebqqChatSession : public Kopete::ChatSession
 	Q_OBJECT
 
 public:
-    WebqqChatSession( Kopete::Protocol *protocol, const Kopete::Contact *user, Kopete::ContactPtrList others);
+    WebqqChatSession(Kopete::Protocol *protocol, const Kopete::Contact *user, Kopete::ContactPtrList others);
     ~WebqqChatSession();
 
 private slots:

@@ -50,13 +50,13 @@ WebqqContact::WebqqContact( Kopete::Account* _account, const QString &uniqueName
 {
 	kDebug( 14210 ) << " uniqueName: " << uniqueName << ", displayName: " << displayName;
     m_displayName = displayName;
-    m_userId = _account;
+    m_userId = uniqueName;
 	m_type = WebqqContact::Null;
 	// FIXME: ? setDisplayName( displayName );
     m_chatManager = 0L;
     m_groupManager = 0L;
     m_discuManager = 0L;
-	
+    m_isGroupDestory = false;
 	setOnlineStatus( WebqqProtocol::protocol()->WebqqOffline );
 }
 
@@ -112,9 +112,9 @@ Kopete::ChatSession* WebqqContact::manager( CanCreateFlags canCreateFlags )
 //	{
 //		return 0;
 //	}
+    canCreateFlags = CanCreate;
     if(m_contactType == Contact_Chat)
     {
-        kDebug( 14210 ) ;
         if ( m_chatManager )
         {
             return m_chatManager;
@@ -136,15 +136,26 @@ Kopete::ChatSession* WebqqContact::manager( CanCreateFlags canCreateFlags )
         }
     }else if(m_contactType == Contact_Group)
     {
+        qDebug()<<"group manager";
         if ( m_groupManager )
         {
+            qDebug()<<"m_groupManager";
             return m_groupManager;
         }
         else if ( canCreateFlags == CanCreate )
         {
+            qDebug()<<"cancreate";
             Kopete::ContactPtrList contacts;
             contacts.append(this);
             m_groupManager = new WebqqGroupChatSession(protocol(), account()->myself(), contacts);
+            m_groupManager->removeAllContacts();
+            if(m_isGroupDestory)
+            {
+                foreach( Kopete::Contact *c, m_groupMebers )
+                {
+                    m_groupManager->joined(c);
+                }
+            }
             m_groupManager->setTopic(m_displayName);
             connect(m_groupManager, SIGNAL(messageSent(Kopete::Message&,Kopete::ChatSession*)),
                     this, SLOT(sendMessage(Kopete::Message&)) );
@@ -153,6 +164,7 @@ Kopete::ChatSession* WebqqContact::manager( CanCreateFlags canCreateFlags )
         }
         else
         {
+            qDebug()<<"0";
             return 0;
         }
     }else if(m_contactType == Contact_Discu)
@@ -232,9 +244,11 @@ void WebqqContact::slotUserInfo()
 	form->show();
 }
 
-void WebqqContact::imageContact()
+void WebqqContact::imageContact(const QString &file)
 {
-
+    QString imgFile = QString("<img src=\"%1\"/>").arg(file);
+    qDebug()<<"img html:"<<imgFile;
+    manager(CanCreate)->setLastUrl(file);
 }
 
 void WebqqContact::buzzContact()
@@ -257,13 +271,16 @@ static const char* local_id_to_serv(qq_account* ac,const char* local_id)
 
 void WebqqContact::slotTyping(bool isTyping_ )
 {
-    if(isTyping_)
+    if(m_contactType == Contact_Chat)
     {
-        Kopete::ContactPtrList m_them = manager(Kopete::Contact::CanCreate)->members();
-        Kopete::Contact *target = m_them.first();
-        LwqqClient* lc = ((WebqqAccount*)account())->m_lc;
-        qq_account *ac = (qq_account*)(lc->data);
-        lwqq_msg_input_notify(ac->qq,local_id_to_serv(ac,(static_cast<WebqqContact*>(target)->m_userId).toUtf8().constData()));
+        if(isTyping_)
+        {
+            Kopete::ContactPtrList m_them = manager(Kopete::Contact::CanCreate)->members();
+            Kopete::Contact *target = m_them.first();
+            LwqqClient* lc = ((WebqqAccount*)account())->m_lc;
+            qq_account *ac = (qq_account*)(lc->data);
+            lwqq_msg_input_notify(ac->qq,local_id_to_serv(ac,(static_cast<WebqqContact*>(target)->m_userId).toUtf8().constData()));
+        }
     }
 }
 
@@ -271,31 +288,25 @@ void WebqqContact::slotTyping(bool isTyping_ )
 void WebqqContact::sendMessage( Kopete::Message &message )
 {
 	kDebug( 14210 ) ;
-	// convert to the what the server wants
-	// For this 'protocol', there's nothing to do
-	// send it
-	/*
-	static_cast<WebqqAccount *>( account() )->server()->sendMessage(
-			message.to().first()->contactId(),
-			message.plainBody() );
-	*/
-	
+
 	/*this is for test*/
 	 qDebug() << "msg:" << message.plainBody();
      qDebug() << "html msg:" << message.getHtmlStyleAttribute();
-	//qDebug()<<
+     qDebug()<<"escapedBody"<<message.escapedBody();
+     qDebug()<<"parsedBody" << message.parsedBody();
 	//first prepare message
 	QString targetQQNumber = message.to().first()->contactId();
+    qDebug()<<"member:"<<targetQQNumber<<"userid"<<m_userId;
 	QString messageStr = message.plainBody();
     if(m_contactType == Contact_Group || m_contactType == Contact_Discu)
-        qq_send_chat(targetQQNumber.toUtf8().constData(), messageStr.toUtf8().constData());
+        qq_send_chat(m_userId.toUtf8().constData(), messageStr.toUtf8().constData());
     else
         qq_send_im(targetQQNumber.toUtf8().constData(), messageStr.toUtf8().constData());
 	
 	// give it back to the manager to display
-	manager()->appendMessage( message );
+    manager(CanCreate)->appendMessage( message );
 	// tell the manager it was sent successfully
-	manager()->messageSucceeded();
+    manager(CanCreate)->messageSucceeded();
 }
 
 
@@ -490,11 +501,14 @@ int WebqqContact::qq_send_chat(const char *gid, const char *message)
 void WebqqContact::receivedMessage( const QString &message )
 {
     qDebug() << "receivedMessage:" << message;
+    QDateTime msgDT;
+    msgDT.setTime_t(time(0L));
     Kopete::ContactPtrList contactList;
 	contactList.append( account()->myself() );
 	// Create a Kopete::Message
 	Kopete::Message newMessage( this, contactList );
     //newMessage.setPlainBody( message );
+    newMessage.setTimestamp( msgDT );
     newMessage.setHtmlBody(message);
 	newMessage.setDirection( Kopete::Message::Inbound );
 
@@ -502,13 +516,23 @@ void WebqqContact::receivedMessage( const QString &message )
 	manager(CanCreate)->appendMessage (newMessage);
 }
 
+void WebqqContact::set_group_members()
+{
+    m_groupMebers = m_groupManager->members();
+}
+
 void WebqqContact::slotChatSessionDestroyed()
 {
 	//FIXME: the chat window was closed?  Take appropriate steps.
     if(m_contactType == Contact_Group)
+    {
         m_groupManager = 0L;
+        m_isGroupDestory = true;
+    }
     else if(m_contactType == Contact_Discu)
-        m_discuManager = 0L;
+    {
+
+    }
     else if(m_contactType == Contact_Chat)
         m_chatManager = 0L;
 }

@@ -404,7 +404,6 @@ void translate_struct_to_message(qq_account* ac, LwqqMsgMessage* msg, char* buf)
     strcat(buf,">");
     
     TAILQ_FOREACH(c, &msg->content, entries) {
-        fprintf(stderr, "msg type:%d####################################\n", c->type);
         switch(c->type){
             case LWQQ_CONTENT_STRING:
                 paste_content_string(c->data.str,buf+strlen(buf));

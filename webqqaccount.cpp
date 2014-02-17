@@ -368,18 +368,9 @@ void WebqqAccount::buddy_message(LwqqClient* lc,LwqqMsgMessage* msg)
     //clean buffer
     strcpy(buf,"");
     LwqqBuddy* buddy = msg->buddy.from;
-    //const char* local_id = buddy->qqnumber;
     qDebug()<<"buddy message";
     translate_struct_to_message(ac,msg,buf);
-    /*
-    KTemporaryFile *inkImage = new KTemporaryFile();
-    inkImage->setPrefix("inkformatgif-");
-    inkImage->setSuffix(".gif");
-    inkImage->open();
-    inkImage->write(ink.constData(), ink.size());
-    QString msg=QString ("<img src=\"%1\" />").arg ( inkImage->fileName() );
-    inkImage->close();
-    */
+
     /*find the contact*/
     WebqqContact * contact = dynamic_cast<WebqqContact *>(contacts().value( QString(buddy->qqnumber) ));
     if ( !contact)
@@ -394,7 +385,9 @@ void WebqqAccount::group_message(LwqqClient *lc, LwqqMsgMessage *msg)
 {
     qq_account* ac = lwqq_client_userdata(lc);
     LwqqGroup* group = find_group_by_gid(lc,(msg->super.super.type==LWQQ_MS_DISCU_MSG)?msg->discu.did:msg->super.from);
-
+    Kopete::ContactPtrList justMe;
+    LwqqBuddy* buddy;
+    QString sendId;
     if(group == NULL) return;
 
     //force open dialog
@@ -403,11 +396,21 @@ void WebqqAccount::group_message(LwqqClient *lc, LwqqMsgMessage *msg)
 
     translate_struct_to_message(ac,msg,buf);
     /*find the contact*/
-    WebqqContact * contact = dynamic_cast<WebqqContact *>(contacts().value( QString(group->gid) ));
-    if ( !contact)
+    WebqqContact * chatContact = dynamic_cast<WebqqContact *>(contacts().value( QString(group->gid) ));
+    if ( !chatContact)
     return;
+    justMe.append(myself());
+    qDebug()<<"time:"<<QDateTime::fromTime_t(msg->time)<<QString(msg->group.send);
+    if((buddy = find_buddy_by_uin(lc,msg->group.send)))
+        sendId = QString(buddy->qqnumber);
+    else
+        sendId = QString(msg->group.send);
+    Kopete::Message kmsg( contact(sendId), justMe );
+    //kmsg.setTimestamp( QString(msg->time) );
+    kmsg.setHtmlBody( QString::fromUtf8(buf) );
+    kmsg.setDirection( Kopete::Message::Inbound );
 
-    contact->receivedMessage( QString::fromUtf8(buf) );
+    chatContact->groupSession()->appendMessage(kmsg);
 }
 
 void WebqqAccount::ac_qq_msg_check(LwqqClient *lc)
@@ -439,7 +442,7 @@ void WebqqAccount::ac_qq_msg_check(LwqqClient *lc)
                     case LWQQ_MS_GROUP_MSG:
                     case LWQQ_MS_DISCU_MSG:
                     case LWQQ_MS_GROUP_WEB_MSG:
-                        //group_message(lc,(LwqqMsgMessage*)msg->msg);
+                        group_message(lc,(LwqqMsgMessage*)msg->msg);
                         break;
                     case LWQQ_MS_SESS_MSG:
                         //whisper_message(lc,(LwqqMsgMessage*)msg->msg);
@@ -614,6 +617,7 @@ void WebqqAccount::ac_group_members(LwqqClient *lc, LwqqGroup *group)
             contact(QString(group->gid))->webqq_addcontacts(contact(QString(member->uin)));
         }
     }
+    contact(QString(group->gid))->set_group_members();
 }
 
 void WebqqAccount::ac_need_verify2(LwqqClient* lc, LwqqVerifyCode* code)
@@ -853,6 +857,7 @@ void WebqqAccount::friend_come(LwqqClient* lc,LwqqBuddy* buddy)
     addContact( QString(buddy->qqnumber), displayName,  targetGroup, Kopete::Account::ChangeKABC );
     
     WebqqContact * addedContact = dynamic_cast<WebqqContact *>(contacts().value( QString(buddy->qqnumber) ));
+    addedContact->setContactType(WebqqContact::Contact_Chat);
     myself()->setOnlineStatus( m_targetStatus );
 //    QByteArray data;
 //    data.clear();

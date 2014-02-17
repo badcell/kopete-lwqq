@@ -1,23 +1,13 @@
 <!DOCTYPE kpartgui>
-<kpartgui version="10" name="kopete_webqq_group">
+<kpartgui version="1" name="kopete_webqq_group">
 	<MenuBar>
-		<Menu noMerge="1" name="file">
-			<Action name="yahooRequestWebcam" />
-			<Action name="yahooSendWebcam" />	
-			<Action name="yahooBuzz" />
-			<Action name="yahooShowInfo" />
-		</Menu>
+            <Menu noMerge="1" name="file">
+                <Action name="WebqqBuzz" />
+                <Action name="WebqqShowInfo" />
+            </Menu>
 	</MenuBar>
-
-
-	<ToolBar name="statusToolBar">
-		<Action name="yahooDisplayPicture" />
-		<Action name="yahooRequestWebcam" />	
-		<Action name="yahooSendWebcam" />		
-		<Action name="yahooBuzz" />
-		<Action name="yahooShowInfo" />	
-	
+	<ToolBar name="statusToolBar">	
+            <Action name="WebqqBuzz" />
+            <Action name="WebqqShowInfo" />
 	</ToolBar>
-
-
 </kpartgui>

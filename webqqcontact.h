@@ -69,9 +69,17 @@ public:
 	 * Returns a Kopete::ChatSession associated with this contact
 	 */
 	virtual Kopete::ChatSession *manager( CanCreateFlags canCreate = CannotCreate );
-
+    WebqqGroupChatSession *groupSession(){
+        return m_groupManager;
+    }
+    WebqqChatSession *chatSession(){
+        return m_chatManager;
+    }
+    WebqqDiscuChatSession *discuSession(){
+        return m_discuManager;
+    }
 	virtual void slotUserInfo();
-    void imageContact();
+    void imageContact(const QString &file);
     void buzzContact();
 	/**
 	 * Set the Type of this contact
@@ -86,6 +94,7 @@ public:
     int qq_send_chat(const char *gid, const char *message);
     void setContactType(ConType type);
     void webqq_addcontacts(Kopete::Contact *others);
+    void set_group_members();
     /*
      * Returns a contact of name @p id
      */
@@ -120,7 +129,8 @@ protected:
     WebqqChatSession* m_chatManager;
     WebqqGroupChatSession* m_groupManager;
     WebqqDiscuChatSession* m_discuManager;
-	
+    Kopete::ContactPtrList m_groupMebers;
+    bool m_isGroupDestory;
 	KActionCollection* m_actionCollection;
 	Type m_type;
 	KAction* m_actionPrefs;
