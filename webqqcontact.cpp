@@ -249,6 +249,20 @@ void WebqqContact::imageContact(const QString &file)
     QString imgFile = QString("<img src=\"%1\"/>").arg(file);
     qDebug()<<"img html:"<<imgFile;
     manager(CanCreate)->setLastUrl(file);
+    Kopete::ContactPtrList justMe;
+    justMe.append(account()->myself());
+    Kopete::Message kmsg(account()->myself(), this);
+    kmsg.setHtmlBody(imgFile);
+    kmsg.setDirection( Kopete::Message::Inbound);
+    if(m_contactType == Contact_Group || m_contactType == Contact_Discu)
+        qq_send_chat(m_userId.toUtf8().constData(), imgFile.toUtf8().constData());
+    else
+        qq_send_im(m_userId.toUtf8().constData(), imgFile.toUtf8().constData());
+
+    // give it back to the manager to display
+    manager(CanCreate)->appendMessage( kmsg );
+    // tell the manager it was sent successfully
+    manager(CanCreate)->messageSucceeded();
 }
 
 void WebqqContact::buzzContact()

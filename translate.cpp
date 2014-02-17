@@ -6,8 +6,14 @@
 #include "translate.h"
 #include "trex.h"
 #include "qq_types.h"
+#include "msg.h"
 #include <ktemporaryfile.h>
 #include <QString>
+#include <sys/stat.h>
+#include <unistd.h>
+#include <libgen.h>
+#include <fcntl.h>
+#include <stdio.h>
 #ifndef INST_PREFIX
 #define INST_PREFIX "/usr"
 #endif
@@ -281,6 +287,40 @@ static LwqqMsgContent* build_face_direct(int num)
     c->data.face = num;
     return c;
 }
+
+static char *img_fileName(const char *file)
+{
+    fprintf(stderr, "fileName:%s\n", basename(file));
+    return basename(file);
+}
+
+static size_t img_filesize(const char *file)
+{
+    struct stat buf;
+    if(stat(file, &buf)<0)
+    {
+        return 0;
+    }
+    return (size_t)buf.st_size;
+}
+
+static size_t img_filebuffer(const char *file, char *buffer)
+{
+    int fd;
+    if((fd = open(file, O_RDONLY)))
+    {
+        fprintf(stderr, "read\n");
+        int size = read(fd, buffer, img_filesize(file));
+        close(fd);
+        return size;
+    }else
+    {
+        fprintf(stderr,"open file failed\n");
+        return 0;
+    }
+}
+
+
 int translate_message_to_struct(LwqqClient* lc,const char* to,const char* what,LwqqMsg* msg,int using_cface)
 {
     const char* ptr = what;
@@ -310,23 +350,40 @@ int translate_message_to_struct(LwqqClient* lc,const char* to,const char* what,L
             if(c) TAILQ_INSERT_TAIL(&mmsg->content,c,entries);
         }
         trex_getsubexp(x,0,&m);
-#if 0	
-        if(strstr(begin,"<IMG")==begin){
+#if 1
+        char fileName[512] = {0};
+        if(strstr(begin,"<img")==begin){
             //process ing img.
-            sscanf(begin,"<IMG ID=\"%d\">",&img_id);
-            PurpleStoredImage* simg = purple_imgstore_find_by_id(img_id);
+            //sscanf(begin,"<img src=\"%s\"/>",fileName);
+            sscanf(begin, "%*[^\"]\"%[^\"]", fileName);
+            fprintf(stderr, "img send:%s\n", fileName);
+            char *imgBuffer = (char *)malloc(img_filesize(fileName));
+            img_filebuffer(fileName, imgBuffer);
+            fprintf(stderr, "filesize:%d, data:%s name:%s\n", img_filesize(fileName), imgBuffer, img_fileName(fileName));
             if(using_cface||msg->type == LWQQ_MS_GROUP_MSG){
-                c = lwqq_msg_fill_upload_cface(
-                        purple_imgstore_get_filename(simg),
-                        purple_imgstore_get_data(simg),
-                        purple_imgstore_get_size(simg));
+                c = s_malloc0(sizeof(*c));
+                c->type = LWQQ_CONTENT_CFACE;
+                c->data.cface.name = s_strdup(img_fileName(fileName));
+                c->data.cface.data = s_malloc(img_filesize(fileName));
+                memcpy(c->data.cface.data, imgBuffer,img_filesize(fileName));
+                c->data.cface.size = img_filesize(fileName);
+//                c = lwqq_msg_fill_upload_cface(
+//                        img_fileName(fileName),
+//                        img_filebuffer(fileName),
+//                        img_filesize(fileName));
             }else{
-                c = lwqq_msg_fill_upload_offline_pic(
-                        purple_imgstore_get_filename(simg), 
-                        purple_imgstore_get_data(simg), 
-                        purple_imgstore_get_size(simg));
+                c = s_malloc0(sizeof(*c));
+                c->type = LWQQ_CONTENT_OFFPIC;
+                c->data.img.name = s_strdup(img_fileName(fileName));
+                c->data.img.data = s_malloc(img_filesize(fileName));
+                memcpy(c->data.img.data,imgBuffer,img_filesize(fileName));
+                c->data.img.size = img_filesize(fileName);
+//                c = lwqq_msg_fill_upload_offline_pic(
+//                            img_fileName(fileName),
+//                            img_filebuffer(fileName),
+//                            img_filesize(fileName));
             }
-        }else if(strstr(begin,"[FACE")==begin){
+        }/*else if(strstr(begin,"[FACE")==begin){
             //processing face
             sscanf(begin,"[FACE_%d]",&img_id);
             c = build_face_direct(img_id);
@@ -340,7 +397,7 @@ int translate_message_to_struct(LwqqClient* lc,const char* to,const char* what,L
             //other face
             c = translate_face?build_face_content(m.begin,m.len):NULL;
             if(c==NULL) c = build_string_content(begin, end, mmsg);
-        }
+        }*/
 #endif
         ptr = end;
         if(c!=NULL)
