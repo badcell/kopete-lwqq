@@ -1,11 +1,18 @@
+#include <curl/curl.h>
 #include <string.h>
 #include <zlib.h>
 #include <stdio.h>
-#include <curl/curl.h>
 #include <stdlib.h>
 #include <assert.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+
+#ifdef WIN32
+#undef SLIST_ENTRY
+//only libev use pipe
+#define pipe ev_pipe
+#endif
+
 #include "async.h"
 #include "smemory.h"
 #include "http.h"
@@ -13,6 +20,8 @@
 #include "queue.h"
 #include "utility.h"
 #include "internal.h"
+
+
 
 #define LWQQ_HTTP_USER_AGENT "Mozilla/5.0 (X11; Linux x86_64; rv:10.0) Gecko/20100101 Firefox/10.0"
 
@@ -26,10 +35,14 @@ static void lwqq_http_add_file_content(LwqqHttpRequest* request,const char* name
         const char* filename,const void* data,size_t size,const char* extension);
 static LwqqAsyncEvent* lwqq_http_do_request_async(LwqqHttpRequest *request, int method,
         char *body,LwqqCommand);
+static void delay_add_handle();
 
 typedef struct GLOBAL {
     CURLM* multi;
     int still_running;
+	int conn_length;//< make sure there are only cache_size http request
+					//running
+	int cache_size;
     LIST_HEAD(,D_ITEM) conn_link;
     LwqqAsyncTimerHandle timer_event;
     LwqqAsyncIoHandle add_listener;
@@ -101,7 +114,7 @@ typedef struct D_ITEM{
 
 
 #if USE_DEBUG
-static int lwqq_gdb_whats_running()
+int lwqq_gdb_whats_running()
 {
     D_ITEM* item;
     char* url;
@@ -644,18 +657,26 @@ static void check_multi_info(GLOBAL *g)
                     curl_multi_add_handle(g->multi, easy);
                     continue;
                 }
-                ev->failcode = ev->result = ec;
+                ev->failcode = ec;
+                ev->result = ret;
             }
 
             curl_multi_remove_handle(g->multi, easy);
             LIST_REMOVE(conn,entries);
+			
+			global.conn_length --;
+			//pthread_mutex_lock(&add_lock);
+			//check_handle_and_add_to_conn_link();
+			//pthread_mutex_unlock(&add_lock);
+			delay_add_handle();
+
             LwqqClient* lc = conn->req->lc;
 
             //if this handle doesn't timeout.so we restore it retry times
             if(ev->failcode != LWQQ_CALLBACK_TIMEOUT) req_->retry_ = req->retry;
             //执行完成时候的回调
             if(lwqq_client_valid(lc))
-            lc->dispatch(_C_(p,async_complete,conn));
+				lwqq_client_dispatch(lc,_C_(p,async_complete,conn));
         }
     }
 }
@@ -684,11 +705,6 @@ static int multi_timer_cb(CURLM *multi, long timeout_ms, void *userp)
     GLOBAL* g = userp;
     //printf("timer_cb:%ld\n",timeout_ms);
     lwqq_async_timer_stop(g->timer_event);
-#if USE_DEBUG
-   if(LWQQ_VERBOSE_LEVEL>=5&&g->still_running>1){
-        lwqq_gdb_whats_running();
-    }
-#endif
     if (timeout_ms > 0) {
         //change time clock
         lwqq_async_timer_watch(g->timer_event,timeout_ms,timer_cb,g);
@@ -756,30 +772,46 @@ static int sock_cb(CURL* e,curl_socket_t s,int what,void* cbp,void* sockp)
     }
     return 0;
 }
+
+static void check_handle_and_add_to_conn_link()
+{
+    D_ITEM* di,*tvar;
+    LIST_FOREACH_SAFE(di,&global.add_link,entries,tvar){
+		if(global.conn_length >= global.cache_size) break;
+        LIST_REMOVE(di,entries);
+        LIST_INSERT_HEAD(&global.conn_link,di,entries);
+        CURLMcode rc = curl_multi_add_handle(global.multi,di->req->req);
+		global.conn_length ++;
+
+        if(rc != CURLM_OK){
+            lwqq_puts(curl_multi_strerror(rc));
+        }
+    }
+}
+
 #ifdef WITH_LIBEV
-static void delay_add_handle(LwqqAsyncIoHandle io,int fd,int act,void* data)
+static void delay_add_handle_cb(LwqqAsyncIoHandle io,int fd,int act,void* data)
 {
     pthread_mutex_lock(&add_lock);
     //remove from pipe
     char buf[16];
     read(fd,buf,sizeof(buf));
 #else
-static void delay_add_handle(void* noused)
+static void delay_add_handle_cb(void* noused)
 {
     pthread_mutex_lock(&add_lock);
 #endif
     
-    D_ITEM* di,*tvar;
-    LIST_FOREACH_SAFE(di,&global.add_link,entries,tvar){
-        LIST_REMOVE(di,entries);
-        LIST_INSERT_HEAD(&global.conn_link,di,entries);
-        CURLMcode rc = curl_multi_add_handle(global.multi,di->req->req);
-
-        if(rc != CURLM_OK){
-            lwqq_puts(curl_multi_strerror(rc));
-        }
-    }
+	check_handle_and_add_to_conn_link();
     pthread_mutex_unlock(&add_lock);
+}
+static void delay_add_handle()
+{
+    #ifdef WITH_LIBEV
+    write(global.pipe_fd[1],"ok",3);
+    #else
+    lwqq_async_dispatch(_C_(p,delay_add_handle_cb,NULL));
+    #endif
 }
 
 static LwqqAsyncEvent* lwqq_http_do_request_async(LwqqHttpRequest *request, int method,
@@ -825,12 +857,8 @@ static LwqqAsyncEvent* lwqq_http_do_request_async(LwqqHttpRequest *request, int 
     di->event = lwqq_async_event_new(request);
     pthread_mutex_lock(&add_lock);
     LIST_INSERT_HEAD(&global.add_link,di,entries);
-    #ifdef WITH_LIBEV
-    write(global.pipe_fd[1],"ok",3);
-    #else
-    lwqq_async_dispatch(_C_(p,delay_add_handle,NULL));
-    #endif
     pthread_mutex_unlock(&add_lock);
+	delay_add_handle();
     return di->event;
 
 failed:
@@ -872,6 +900,7 @@ retry:
         if(set_error_code(request, ret, &ec)){
             goto retry;
         }
+        request->failcode = ec;
         return ec;
     }
     //perduce timeout.
@@ -939,6 +968,8 @@ void lwqq_http_global_init()
         curl_multi_setopt(global.multi,CURLMOPT_SOCKETDATA,&global);
         curl_multi_setopt(global.multi, CURLMOPT_TIMERFUNCTION, multi_timer_cb);
         curl_multi_setopt(global.multi, CURLMOPT_TIMERDATA, &global);
+		global.cache_size = 100;
+		global.conn_length = 0;
 
         
 #ifndef WITHOUT_ASYNC
@@ -946,7 +977,7 @@ void lwqq_http_global_init()
         global.add_listener = lwqq_async_io_new();
         #ifdef WITH_LIBEV
         pipe(global.pipe_fd);
-        lwqq_async_io_watch(global.add_listener, global.pipe_fd[0], LWQQ_ASYNC_READ, delay_add_handle, NULL);
+        lwqq_async_io_watch(global.add_listener, global.pipe_fd[0], LWQQ_ASYNC_READ, delay_add_handle_cb, NULL);
         #endif
 #endif
     }
@@ -995,6 +1026,7 @@ void lwqq_http_global_free()
         lwqq_async_timer_stop(global.timer_event);
         lwqq_async_timer_free(global.timer_event);
         curl_global_cleanup();
+		global.conn_length = 0;
     }
 }
 void lwqq_http_cleanup(LwqqClient*lc)
@@ -1084,7 +1116,7 @@ static int lwqq_http_progress_trans(void* d,double dt,double dn,double ut,double
 {
     LwqqHttpRequest* req = d;
     LwqqHttpRequest_* req_ = d;
-    if(req_->retry_ == 0) return 1;
+    if(req_->retry_ == 0||req_->bits&HTTP_FORCE_CANCEL) return 1;
     time_t ct = time(NULL);
     if(ct<=req->last_prog) return 0;
 
@@ -1139,6 +1171,9 @@ void lwqq_http_set_option(LwqqHttpRequest* req,LwqqHttpOption opt,...)
         case LWQQ_HTTP_MAXREDIRS:
             curl_easy_setopt(req->req, CURLOPT_MAXREDIRS, va_arg(args,long));
             break;
+		case LWQQ_HTTP_MAX_LINK:
+			global.cache_size = va_arg(args,long);
+			break;
         default:
             val = va_arg(args,long);
             val?(req_->flags&=opt):(req_->flags|=~opt);
@@ -1156,6 +1191,7 @@ void lwqq_http_cancel(LwqqHttpRequest* req)
 LwqqHttpHandle* lwqq_http_handle_new()
 {
     LwqqHttpHandle_* h_ = s_malloc0(sizeof(LwqqHttpHandle_));
+	h_->parent.ssl = 1;
     h_->share = curl_share_init();
     CURLSH* share = h_->share;
     curl_share_setopt(share,CURLSHOPT_SHARE,CURL_LOCK_DATA_DNS);
@@ -1186,7 +1222,6 @@ void lwqq_http_handle_free(LwqqHttpHandle* http)
 }
 void lwqq_http_proxy_apply(LwqqHttpHandle* handle,LwqqHttpRequest* req)
 {
-    #ifndef WIN32
     CURL* c = req->req;
     char* v;
     long l;
@@ -1207,5 +1242,11 @@ void lwqq_http_proxy_apply(LwqqHttpHandle* handle,LwqqHttpRequest* req)
         if(l) curl_easy_setopt(c, CURLOPT_PROXYPORT, l);
     }
     curl_easy_setopt(c, CURLOPT_PROXYTYPE,handle->proxy.type);
-    #endif
+}
+
+const char* lwqq_http_get_url(LwqqHttpRequest* req)
+{
+    char* url = NULL;
+    curl_easy_getinfo(req->req, CURLINFO_EFFECTIVE_URL,&url);
+    return url;
 }

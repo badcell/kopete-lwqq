@@ -20,6 +20,23 @@
 #include "internal.h"
 #include "utility.h"
 
+const LwqqFeatures lwqq_features = 0
+#ifdef WITH_LIBEV
+|LWQQ_WITH_LIBEV
+#endif
+#ifdef WITH_LIBUV
+|LWQQ_WITH_LIBUV
+#endif
+#ifdef WITH_SQLITE
+|LWQQ_WITH_SQLITE
+#endif
+#ifdef WITH_MOZJS
+|LWQQ_WITH_MOZJS
+#endif
+#ifdef SSL
+|LWQQ_WITH_SSL
+#endif
+;
 
 static struct LwqqTypeMap status_type_map[] = {
     {LWQQ_STATUS_ONLINE  ,"online",   },
@@ -32,7 +49,6 @@ static struct LwqqTypeMap status_type_map[] = {
     {LWQQ_STATUS_LOGOUT  ,NULL,          }
 };
 
-
 const char* lwqq_status_to_str(LwqqStatus status)
 {
     return lwqq_util_mapto_str(status_type_map, status);
@@ -42,16 +58,6 @@ LwqqStatus lwqq_status_from_str(const char* str)
 {
     return lwqq_util_mapto_type(status_type_map, str);
 }
-
-
-static void null_action(LwqqClient* lc)
-{
-}
-
-static LwqqAction default_async_opt = {
-    .poll_msg = null_action,
-    .poll_lost = null_action,
-};
 
 typedef struct LwqqClient_
 {
@@ -92,7 +98,13 @@ LwqqClient *lwqq_client_new(const char *username, const char *password)
 
     lc->msg_list = lwqq_msglist_new(lc);
 
-    lc->action = &default_async_opt;
+    LwqqFriendCategory* my_friend = s_malloc0(sizeof(*my_friend));
+    my_friend->index = 0;
+    my_friend->name = s_strdup("My Friend");
+    LIST_INSERT_HEAD(&lc->categories, my_friend, entries);
+
+	lc->events = s_malloc0(sizeof(*lc->events));
+	lc->args = s_malloc0(sizeof(*lc->args));
 
     lc->find_buddy_by_uin = lwqq_buddy_find_buddy_by_uin;
     lc->find_buddy_by_qqnumber = lwqq_buddy_find_buddy_by_qqnumber;
@@ -115,7 +127,7 @@ failed:
     return NULL;
 }
 
-void* lwqq_get_http_handle(LwqqClient* lc)
+struct LwqqHttpHandle* lwqq_get_http_handle(LwqqClient* lc)
 {
     return ((LwqqClient_*)lc)->http;
 }
@@ -176,6 +188,18 @@ void lwqq_client_free(LwqqClient *client)
     s_free(client->new_ptwebqq);
     s_free(client->login_sig);
     lwqq_buddy_free(client->myself);
+
+	vp_cancel(client->events->login_complete);
+	vp_cancel(client->events->poll_msg);
+	vp_cancel(client->events->poll_lost);
+	vp_cancel(client->events->upload_fail);
+	vp_cancel(client->events->new_friend);
+	vp_cancel(client->events->new_group);
+	vp_cancel(client->events->need_verify);
+	vp_cancel(client->events->delete_group);
+	vp_cancel(client->events->group_member_chg);
+	s_free(client->events);
+	s_free(client->args);
         
     /* Free friends list */
     LIST_FOREACH_SAFE(b_entry, &client->friends, entries, b_next) {
@@ -332,6 +356,15 @@ LwqqFriendCategory* lwqq_category_find_by_name(LwqqClient* lc,const char* name)
     }
     return NULL;
 }
+LwqqFriendCategory* lwqq_category_find_by_id(LwqqClient* lc,int index)
+{
+    if(!lc) return NULL;
+    LwqqFriendCategory* cate;
+    LIST_FOREACH(cate,&lc->categories,entries){
+        if(cate->index == index) return cate;
+    }
+    return NULL;
+}
 
 /* LwqqBuddy API END*/
 /************************************************************************/
@@ -373,6 +406,7 @@ void lwqq_group_free(LwqqGroup *group)
     s_free(group->owner);
     s_free(group->flag);
     s_free(group->option);
+    s_free(group->info_seq);
 
     s_free(group->avatar);
 
@@ -415,13 +449,17 @@ LwqqGroup *lwqq_group_find_group_by_gid(LwqqClient *lc, const char *gid)
 
 LwqqGroup* lwqq_group_find_group_by_qqnumber(LwqqClient* lc,const char* qqnumber)
 {
-    LwqqGroup *group;
+    LwqqGroup *group,*discu;
     
     if (!lc || !qqnumber)
         return NULL;
 
     LIST_FOREACH(group,&lc->groups,entries){
         if(group->account && ! strcmp(group->account,qqnumber) ) return group;
+    }
+
+    LIST_FOREACH(discu,&lc->discus,entries){
+        if(discu->account && ! strcmp(discu->account,qqnumber) ) return discu;
     }
     return NULL;
 }
@@ -467,4 +505,17 @@ long lwqq_time()
     long ret;
     ret = tv.tv_sec*1000+tv.tv_usec/1000;
     return ret;
+}
+
+void lwqq_add_event_listener(LwqqCommand* inko,LwqqCommand cmd)
+{
+	vp_link(inko, &cmd);
+}
+LwqqEvents* lwqq_client_get_events(LwqqClient* lc)
+{
+	return lc->events;
+}
+LwqqArguments* lwqq_client_get_args(LwqqClient* lc)
+{
+	return lc->args;
 }

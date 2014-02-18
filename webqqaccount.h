@@ -108,8 +108,8 @@ public slots:
 	void friend_come(LwqqClient *lc, LwqqBuddy *buddy);
 	void group_come(LwqqClient* lc,LwqqGroup* group);
 	
-	void ac_need_verify2(LwqqClient* lc, LwqqVerifyCode* code);
-	void ac_login_stage_1(LwqqClient* lc,LwqqErrorCode err);
+    void ac_need_verify2(LwqqClient* lc, LwqqVerifyCode *code);
+    void ac_login_stage_1(LwqqClient* lc, LwqqErrorCode *p_err);
 	void ac_login_stage_2(LwqqAsyncEvent* event,LwqqClient* lc);
 	void ac_login_stage_3(LwqqClient* lc);
 	void ac_login_stage_f(LwqqClient* lc);
@@ -167,14 +167,17 @@ private:
      * use lwqq library logout
      */
     void logout();
-    
+    /*
+     * init client events
+     */
+    void init_client_events(LwqqClient* lc);
 
     QString m_username;
     QString m_password;
     
     Kopete::OnlineStatus m_targetStatus; 
     /* lwqq async option */
-    LwqqAction m_async_opt;
+    LwqqEvents m_async_opt;
     WebqqProtocol *m_protocol;
     
     QTimer *pollTimer;
@@ -183,8 +186,8 @@ private:
     //void login_stage_2(LwqqAsyncEvent* ev,LwqqClient* lc);
 };
 
-static void cb_need_verify2(LwqqClient* lc,LwqqVerifyCode* code);
-static void cb_login_stage_1(LwqqClient* lc,LwqqErrorCode err);
+static void cb_need_verify2(LwqqClient* lc, LwqqVerifyCode **code);
+static void cb_login_stage_1(LwqqClient* lc, LwqqErrorCode *err);
 static void cb_login_stage_2(LwqqAsyncEvent* event,LwqqClient* lc);
 static void cb_login_stage_3(LwqqClient* lc);
 static void cb_login_stage_f(LwqqClient* lc);
@@ -193,12 +196,12 @@ static void cb_group_avatar(LwqqClient *lc, LwqqGroup *group);
 static void cb_group_members(LwqqClient *lc, LwqqGroup *group);
 static void cb_qq_msg_check(LwqqClient* lc);
 
-static void cb_friend_come(LwqqClient* lc,LwqqBuddy* buddy);
-static void cb_group_come(LwqqClient* lc,LwqqGroup* group);
+static void cb_friend_come(LwqqClient* lc, LwqqBuddy **buddy);
+static void cb_group_come(LwqqClient* lc, LwqqGroup **group);
 static void cb_lost_connection(LwqqClient* lc);
-static void cb_upload_content_fail(LwqqClient* lc,const char* serv_id,LwqqMsgContent* c,int err);
-static void cb_delete_group_local(LwqqClient* lc,const LwqqGroup* g);
-static void cb_flush_group_members(LwqqClient* lc,LwqqGroup* g);
+static void cb_upload_content_fail(LwqqClient* lc, const char **serv_id, LwqqMsgContent **c, int err);
+static void cb_delete_group_local(LwqqClient* lc, const LwqqGroup **g);
+static void cb_flush_group_members(LwqqClient* lc, LwqqGroup **g);
 
 
 

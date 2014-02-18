@@ -32,6 +32,7 @@ void vp_do(vp_command cmd,void* retval)
     vp_start(cmd.data);
     cmd.dsph(cmd.func,&cmd.data,retval);
     vp_end(cmd.data);
+
     cmd.dsph = (VP_DISPATCH)NULL;
     cmd.func = (VP_CALLBACK)NULL;
     vp_command* n = cmd.next;
@@ -44,6 +45,21 @@ void vp_do(vp_command cmd,void* retval)
         p = n;
         n = n->next;
         free(p);
+    }
+}
+
+void vp_do_repeat(vp_command cmd,void* retval)
+{
+	if(cmd.dsph && cmd.func){
+		vp_start(cmd.data);
+		cmd.dsph(cmd.func,&cmd.data,retval);
+	}
+
+    vp_command* n = cmd.next;
+    while(n){
+        vp_start(n->data);
+        n->dsph(n->func,&n->data,NULL);
+        n = n->next;
     }
 }
 void vp_cancel(vp_command cmd)
@@ -145,6 +161,24 @@ void vp_func_3p(VP_CALLBACK func,vp_list* vp,void* q)
     void* p2 = vp_arg(*vp,void*);
     void* p3 = vp_arg(*vp,void*);
     ((f)func)(p1,p2,p3);
+}
+void vp_func_3pi(VP_CALLBACK func,vp_list* vp,void* q)
+{
+    typedef void (*f)(void*,void*,void*,int);
+    if( !func ){
+        va_list* va = q;
+        vp_init(*vp,sizeof(void*)*3+sizeof(int));
+        vp_dump(*vp,*va,void*);
+        vp_dump(*vp,*va,void*);
+        vp_dump(*vp,*va,void*);
+        vp_dump(*vp,*va,int);
+        return ;
+    }
+    void* p1 = vp_arg(*vp,void*);
+    void* p2 = vp_arg(*vp,void*);
+    void* p3 = vp_arg(*vp,void*);
+    int p4 = vp_arg(*vp,int);
+    ((f)func)(p1,p2,p3,p4);
 }
 void vp_func_4p(VP_CALLBACK func,vp_list* vp,void* q)
 {

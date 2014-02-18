@@ -196,28 +196,42 @@ void WebqqAccount::setOnlineStatus(const Kopete::OnlineStatus& status, const Kop
 	}
 }
 
+void WebqqAccount::init_client_events(LwqqClient *lc)
+{
+    lwqq_add_event(lc->events->login_complete,
+            _C_(2p,cb_login_stage_1,lc, &lc->args->login_ec));
+    lwqq_add_event(lc->events->new_friend,
+            _C_(2p,cb_friend_come,lc, &lc->args->buddy));
+    lwqq_add_event(lc->events->new_group,
+            _C_(2p,cb_group_come,lc, &lc->args->group));
+    lwqq_add_event(lc->events->poll_msg,
+            _C_(p,cb_qq_msg_check,lc));
+    lwqq_add_event(lc->events->poll_lost,
+            _C_(p,cb_lost_connection,lc));
+    lwqq_add_event(lc->events->need_verify,
+            _C_(2p,cb_need_verify2,lc, &lc->args->vf_image));
+    lwqq_add_event(lc->events->delete_group,
+            _C_(2p,cb_delete_group_local,lc, &lc->args->deleted_group));
+    lwqq_add_event(lc->events->group_member_chg,
+            _C_(2p,cb_flush_group_members,lc, &lc->args->group));
+    lwqq_add_event(lc->events->upload_fail,
+            _C_(4p,cb_upload_content_fail,lc, &lc->args->serv_id, &lc->args->content, &lc->args->err));
+}
+
 void WebqqAccount::initLwqqAccount()
 {
 	if(m_lc)
 	  return;
 	
-	printf("init lwqq account\n");
-	m_async_opt.need_verify2 = cb_need_verify2;
-	m_async_opt.login_complete = cb_login_stage_1;	    	
-	m_async_opt.new_friend = cb_friend_come;
-	m_async_opt.new_group = cb_group_come;
-	m_async_opt.poll_msg = cb_qq_msg_check;
-	m_async_opt.poll_lost = cb_lost_connection;
-	m_async_opt.upload_fail = cb_upload_content_fail;
-	m_async_opt.delete_group = cb_delete_group_local;
-	m_async_opt.group_members_chg = cb_flush_group_members;
+    qDebug("init lwqq account\n");
+
 		
-	const char* username = accountId().toAscii().constData();
-	const char* password = "XXX";
+    const char* username = s_strdup(accountId().toAscii().constData());
+    const char* password = "XXXX";
 	qq_account* ac = qq_account_new(username, password);
 
 	m_lc = ac->qq;
-	ac->qq->action= &m_async_opt;
+    init_client_events(ac->qq);
 	
 	ac->db = lwdb_userdb_new(username,NULL,0);
 	ac->qq->data = ac;
@@ -306,7 +320,7 @@ void WebqqAccount::slotReceivedInstanceSignal(CallbackObject cb)
   else if(cb.fun_t == LOGIN_COMPLETE)
   {
     LwqqClient* lc = (LwqqClient*)(cb.ptr1);
-    LwqqErrorCode err = cb.err;
+    LwqqErrorCode *err = (LwqqErrorCode *)(cb.ptr2);
     this->ac_login_stage_1(lc, err);
   }
   else if(cb.fun_t == LOGIN_STAGE_2)
@@ -628,7 +642,7 @@ void WebqqAccount::ac_need_verify2(LwqqClient* lc, LwqqVerifyCode* code)
     char vcode[256] = {0};
     snprintf(fname,sizeof(fname),"%s.jpeg",lc->username);
     lwqq_util_save_img(code->data,code->size,fname,dir);
-    
+    //if(!lwqq_client_valid(code->lc)) return;
     LoginVerifyDialog *dlg = new LoginVerifyDialog();
     QString fullPath = QString(dir) + QString(fname);
     dlg->setImage(fullPath);
@@ -650,8 +664,9 @@ void test(LwqqClient *lc)
   printf("has called test\n");
 }
 
-void WebqqAccount::ac_login_stage_1(LwqqClient* lc,LwqqErrorCode err)
+void WebqqAccount::ac_login_stage_1(LwqqClient* lc,LwqqErrorCode* p_err)
 {
+     LwqqErrorCode err = *p_err;
      QString message;
      switch(err){
         case LWQQ_EC_OK:
@@ -698,6 +713,8 @@ void WebqqAccount::ac_login_stage_1(LwqqClient* lc,LwqqErrorCode err)
             //purple_connection_error_reason(gc,PURPLE_CONNECTION_ERROR_OTHER_ERROR,_("Network Error"));
             return;
         default:
+         qDebug()<<"error:"<<err;
+         fprintf(stderr,"err msg: %s\n",m_lc->last_err);
 	    disconnected( Manual );			// don't reconnect
 	    myself()->setOnlineStatus( m_protocol->WebqqOffline);
 	    message = i18n( "Unknown error!");
@@ -1304,7 +1321,7 @@ void WebqqAccount::connectWithPassword( const QString &passwd )
 	s_free(m_lc->password);
 	m_lc->username = s_strdup(accountId().toAscii().constData());
 	m_lc->password = s_strdup(passwd.toAscii().constData());
-	
+
 	/*first get the connect type*/
 	LwqqStatus targetLwqqStatus;
 	if (m_targetStatus == Kopete::OnlineStatus::Online)
@@ -1323,11 +1340,11 @@ void WebqqAccount::connectWithPassword( const QString &passwd )
 	{
 	  targetLwqqStatus = LWQQ_STATUS_ONLINE;
 	}
-
 	
 	/*try to connect to lwqq*/
+    lwqq_get_http_handle(m_lc)->ssl = 0;
 	LwqqErrorCode err;
-	lwqq_login(m_lc, targetLwqqStatus, &err);
+    lwqq_login(m_lc, targetLwqqStatus, NULL);
 	
 }
 
@@ -1455,23 +1472,23 @@ void WebqqAccount::updateContactStatus()
 
 
 
-static void cb_need_verify2(LwqqClient* lc,LwqqVerifyCode* code)
+static void cb_need_verify2(LwqqClient* lc,LwqqVerifyCode** code)
 {
   printf("need verify2\n");
   CallbackObject cb;
   cb.fun_t = NEED_VERIFY2;
   cb.ptr1 = (void *)lc;
-  cb.ptr2 = (void *)code;
+  cb.ptr2 = (void *)(*code);
   ObjectInstance::instance()->callSignal(cb);
 }
 
-static void cb_login_stage_1(LwqqClient* lc,LwqqErrorCode err)
+static void cb_login_stage_1(LwqqClient* lc,LwqqErrorCode* err)
 {
   printf("stage_1\n");
   CallbackObject cb;
   cb.fun_t = LOGIN_COMPLETE;
   cb.ptr1 = (void *)lc;
-  cb.err= err;
+  cb.ptr2= (void *)err;
   ObjectInstance::instance()->callSignal(cb);
 } 
 
@@ -1596,14 +1613,14 @@ static void get_friends_info_retry(LwqqClient* lc,LwqqHashFunc hashtry)
 
 
 
-static void cb_friend_come(LwqqClient* lc,LwqqBuddy* buddy){printf("********%s\n", __FUNCTION__);}
-static void cb_group_come(LwqqClient* lc,LwqqGroup* group){printf("********%s\n", __FUNCTION__);}
+static void cb_friend_come(LwqqClient* lc,LwqqBuddy** buddy){printf("********%s\n", __FUNCTION__);}
+static void cb_group_come(LwqqClient* lc,LwqqGroup** group){printf("********%s\n", __FUNCTION__);}
 
 static void cb_lost_connection(LwqqClient* lc){printf("********%s\n", __FUNCTION__);}
-static void cb_upload_content_fail(LwqqClient* lc,const char* serv_id,LwqqMsgContent* c,int err)
+static void cb_upload_content_fail(LwqqClient* lc,const char** serv_id,LwqqMsgContent** c,int err)
 {printf("********%s\n", __FUNCTION__);}
-static void cb_delete_group_local(LwqqClient* lc,const LwqqGroup* g){printf("********%s\n", __FUNCTION__);}
-static void cb_flush_group_members(LwqqClient* lc,LwqqGroup* g){printf("********%s\n", __FUNCTION__);}
+static void cb_delete_group_local(LwqqClient* lc,const LwqqGroup** g){printf("********%s\n", __FUNCTION__);}
+static void cb_flush_group_members(LwqqClient* lc,LwqqGroup** g){printf("********%s\n", __FUNCTION__);}
 
 
 Kopete::OnlineStatus statusFromLwqqStatus(LwqqStatus status)

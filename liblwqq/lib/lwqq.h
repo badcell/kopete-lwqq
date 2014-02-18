@@ -1,5 +1,5 @@
 
-
+#include "lwqq-config.h"
 #include "type.h"
 #include "info.h"
 #include "login.h"

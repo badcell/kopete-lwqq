@@ -25,8 +25,11 @@ typedef struct vp_command{VP_DISPATCH dsph;VP_CALLBACK func;vp_list data;struct 
 
 vp_command vp_make_command(VP_DISPATCH,VP_CALLBACK,...);
 void vp_do(vp_command,void* retval);
+void vp_do_repeat(vp_command cmd,void* retval);
 void vp_link(vp_command* head,vp_command* elem);
 void vp_cancel(vp_command);
+//cancel and clear memory to pass vp_do 
+#define vp_cancel0(cmd) {vp_cancel(cmd);memset(&cmd,0,sizeof(cmd));}
 
 vp_list* vp_make_params(VP_DISPATCH,...);
 /**
@@ -35,14 +38,15 @@ vp_list* vp_make_params(VP_DISPATCH,...);
  * func_[lst] param list is [lst] ret is void
  * func_[lst]_[ret] param list is [lst] ret is [ret]
  */
-void vp_func_void(VP_CALLBACK,vp_list*,void*);
-void vp_func_p(VP_CALLBACK,vp_list*,void*);
-void vp_func_2p(VP_CALLBACK,vp_list*,void*);
-void vp_func_2pi(VP_CALLBACK,vp_list*,void*);
-void vp_func_3p(VP_CALLBACK,vp_list*,void*);
-void vp_func_4p(VP_CALLBACK,vp_list*,void*);
-void vp_func_pi(VP_CALLBACK,vp_list*,void*);
+void vp_func_void ( VP_CALLBACK,vp_list*,void*);
+void vp_func_p    ( VP_CALLBACK,vp_list*,void*);
+void vp_func_2p   ( VP_CALLBACK,vp_list*,void*);
+void vp_func_2pi  ( VP_CALLBACK,vp_list*,void*);
+void vp_func_3p   ( VP_CALLBACK,vp_list*,void*);
+void vp_func_3pi  ( VP_CALLBACK,vp_list*,void*);
+void vp_func_4p   ( VP_CALLBACK,vp_list*,void*);
+void vp_func_pi   ( VP_CALLBACK,vp_list*,void*);
 
-void vp_func_p_i(VP_CALLBACK,vp_list*,void*);
-void vp_func_2p_i(VP_CALLBACK,vp_list*,void*);
-void vp_func_3p_i(VP_CALLBACK,vp_list*,void*);
+void vp_func_p_i  ( VP_CALLBACK,vp_list*,void*);
+void vp_func_2p_i ( VP_CALLBACK,vp_list*,void*);
+void vp_func_3p_i ( VP_CALLBACK,vp_list*,void*);

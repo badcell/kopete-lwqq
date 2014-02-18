@@ -48,8 +48,8 @@ typedef struct LwqqAsyncEvent_{
     LwqqAsyncEvset* host_lock;
     LwqqCommand cmd;
     LwqqHttpRequest* req;
+	LwqqAsyncEvent* chained;
 }LwqqAsyncEvent_;
-
 
 static void dispatch_wrap(LwqqAsyncTimerHandle timer,void* p)
 {
@@ -63,11 +63,15 @@ static void dispatch_wrap(LwqqAsyncTimerHandle timer,void* p)
 }
 void lwqq_async_dispatch(LwqqCommand cmd)
 {
+	lwqq_async_dispatch_delay(cmd, 10);
+}
+void lwqq_async_dispatch_delay(LwqqCommand cmd,unsigned long timeout)
+{
 #ifndef WITHOUT_ASYNC
     async_dispatch_data* data = s_malloc0(sizeof(*data));
     data->cmd = cmd;
     data->timer = lwqq_async_timer_new();
-    lwqq_async_timer_watch(data->timer, 10, dispatch_wrap, data);
+    lwqq_async_timer_watch(data->timer, timeout, dispatch_wrap, data);
 #else
     vp_do(cmd,NULL);
 #endif
@@ -75,17 +79,21 @@ void lwqq_async_dispatch(LwqqCommand cmd)
 
 void lwqq_async_init(LwqqClient* lc)
 {
-    lc->dispatch = lwqq_async_dispatch;
+    lc->dispatch = lwqq_async_dispatch_delay;
 #ifdef WITH_LIBEV
     LWQQ_ASYNC_IMPLEMENT(impl_libev);
 #endif
 #ifdef WITH_LIBUV
     LWQQ_ASYNC_IMPLEMENT(impl_libuv);
 #endif
+    //if we doesn't need async, 
+    //we don't check default settings
+#ifndef WITHOUT_ASYNC
     //check async_impl
     assert(LWQQ__ASYNC_IMPL(loop_create));
     assert(LWQQ__ASYNC_IMPL(io_new));
     assert(LWQQ__ASYNC_IMPL(timer_new));
+#endif
 }
 
 LwqqAsyncEvent* lwqq_async_event_new(void* req)
@@ -191,14 +199,22 @@ void lwqq_async_add_event_chain(LwqqAsyncEvent* caller,LwqqAsyncEvent* called)
 {
     /**indeed caller->lc may be NULL when recursor */
     called->lc = caller->lc;
+	LwqqAsyncEvent_* called_ = (LwqqAsyncEvent_*)called;
+	//cancel previous chained event
+	if(called_->chained){
+		LwqqAsyncEvent_* chained_ = (LwqqAsyncEvent_*)called_->chained;
+		vp_cancel0(chained_->cmd);
+	}
+	called_->chained = caller;
     if(caller->failcode == LWQQ_CALLBACK_SYNCED){
         //when sync enabled, caller and called must finished already.
         //so free caller ,and do not trigger anything
         called->result = caller->result;
         called->failcode = caller->failcode;
         lwqq_async_event_finish(caller);
-    }else
+    }else{
         lwqq_async_add_event_listener(caller,_C_(2p,on_chain,caller,called));
+	}
 }
 void lwqq_async_add_evset_listener(LwqqAsyncEvset* evset,LwqqCommand cmd)
 {
@@ -275,11 +291,15 @@ static void *ev_run_thread(void* data)
     pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
     //signal(SIGPIPE,SIG_IGN);
     while(1){
+
         ev_thread_status = THREAD_NOW_RUNNING;
+
         LWQQ__ASYNC_IMPL(loop_run)();
         //if(ev_thread_status == THREAD_NOT_CREATED) return NULL;
         if(global_quit_lock) return NULL;
+
         ev_thread_status = THREAD_NOW_WAITING;
+
         pthread_mutex_lock(&mutex);
         pthread_cond_wait(&ev_thread_cond,&mutex);
         pthread_mutex_unlock(&mutex);
@@ -360,16 +380,10 @@ void lwqq_async_timer_repeat(LwqqAsyncTimerHandle timer)
 {
     LWQQ__ASYNC_IMPL(timer_again)(timer);
 }
-#if 0
-static void print_loop_no_impl()
-{
-    fprintf(stderr,"Need A Async Loop Implemention\n");
-    assert(0);
-}
-#endif
 LwqqAsyncImpl lwqq__async_impl_ = {0};
 
 void lwqq_async_implement(LwqqAsyncImpl* i)
 {
     lwqq__async_impl_ = *i;
 }
+

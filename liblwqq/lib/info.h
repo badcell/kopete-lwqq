@@ -152,7 +152,7 @@ LwqqAsyncEvent* lwqq_info_delete_friend(LwqqClient* lc,LwqqBuddy* buddy,LwqqDelF
  */
 LwqqAsyncEvent* lwqq_info_delete_group(LwqqClient* lc,LwqqGroup* group);
 //no necessary to call
-void lwqq_info_get_group_sig(LwqqClient* lc,LwqqGroup* group,const char* to_uin);
+LwqqAsyncEvent* lwqq_info_get_group_sig(LwqqClient* lc,LwqqGroup* group,const char* to_uin);
 
 LwqqAsyncEvent* lwqq_info_change_status(LwqqClient* lc,LwqqStatus status);
 LwqqAsyncEvent* lwqq_info_mask_group(LwqqClient* lc,LwqqGroup* group,LwqqMask mask);
@@ -231,8 +231,6 @@ LwqqAsyncEvent* lwqq_info_get_single_long_nick(LwqqClient* lc,LwqqBuddy* buddy);
 LwqqAsyncEvent* lwqq_info_set_self_long_nick(LwqqClient* lc,const char* nick);
 
 LwqqAsyncEvent* lwqq_info_get_group_memo(LwqqClient* lc,LwqqGroup* g);
-
-LwqqAsyncEvent* lwqq_info_set_dicsu_topic(LwqqClient* lc,LwqqGroup* d,const char* topic);
 
 void lwqq_recent_list_free(LwqqRecentList* list);
 LwqqAsyncEvent* lwqq_info_recent_list(LwqqClient* lc,LwqqRecentList* list);

@@ -352,7 +352,7 @@ static void cb_send_receipt(LwqqAsyncEvent* ev,LwqqMsg* msg,char* serv_id,char* 
 	    //qq_sys_msg_write(ac, msg->type, serv_id, buf, PURPLE_MESSAGE_ERROR, time(NULL));
         }
         if(err == LWQQ_EC_LOST_CONN){
-            ac->qq->action->poll_lost(ac->qq);
+            vp_do_repeat(ac->qq->events->poll_lost, NULL);
         }
     }
     if(mmsg->upload_retry <0)

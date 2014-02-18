@@ -2,22 +2,37 @@
 #define LWQQ_INTERNAL_H_H
 #include "type.h"
 #include "json.h"
-#include "config.h"
+#include "lwqq-config.h"
 #include "async.h"
 #ifdef WIN32
 #include "win32.h"
 #endif
 
-#ifndef LWQQ_ENABLE_SSL
-#define LWQQ_ENABLE_SSL 0
-#endif
+#define WEBQQ_LOGIN_UI_HOST "https://ui.ptlogin2.qq.com"
+#define WEBQQ_CAPTCHA_HOST  "https://ssl.captcha.qq.com"
+#define WEBQQ_LOGIN_HOST    "https://ssl.ptlogin2.qq.com"
+#define WEBQQ_CHECK_HOST    WEBQQ_LOGIN_HOST
+#define WEBQQ_S_HOST        "http://s.web2.qq.com"
 
-#if LWQQ_ENABLE_SSL
+#define WEBQQ_S_REF_URL     WEBQQ_S_HOST"/proxy.html?v=20110331002&callback=1"
+#define WEBQQ_LOGIN_REF_URL WEBQQ_LOGIN_HOST"/proxy.html"
+#define WEBQQ_VERSION_URL   WEBQQ_LOGIN_UI_HOST"/cgi-bin/ver"
+#define WEBQQ_VERSION_URL   WEBQQ_LOGIN_UI_HOST"/cgi-bin/ver"
+#define WEBQQ_LOGIN_LONG_REF_URL(buf) (snprintf(buf,sizeof(buf),\
+            WEBQQ_LOGIN_UI_HOST"/cgi-bin/login?daid=164&target=self&style=5&mibao_css=m_webqq"\
+            "&appid=1003903&enable_qlogin=0&no_verifyimg=1&s_url=http%%3A%%2F%%2Fweb2.qq.com"\
+            "%%2Floginproxy.html&f_url=loginerroralert&strong_login=1&login_stat=%d&t=%lu",\
+            lc->stat,LTIME),buf)
+
+#if 0
+#ifdef ENABLE_SSL
 //ssl switcher
 #define SSL_(ssl,normal) ssl
 #else
 #define SSL_(ssl,normal) normal
 #endif
+
+#define SSL__ 1
 
 #define H_ SSL_("https://","http://")
 //normal ssl switcher
@@ -31,16 +46,20 @@
 #define WEBQQ_CHECK_HOST    H_ S_("check.")"ptlogin2.qq.com"
 #define WEBQQ_LOGIN_HOST    H_S_"ptlogin2.qq.com"
 #define WEBQQ_CAPTCHA_HOST  H_S_"captcha.qq.com"
-#define WEBQQ_D_HOST        H_"d.web2.qq.com"
-#define WEBQQ_S_HOST        "http://s.web2.qq.com"
+//#define WEBQQ_D_HOST        H_"d.web2.qq.com"
+#define WEBQQ_D_HOST(url)  "%s"url,H_"d.web2.qq.com"
+#define WEBQQ_S_HOST(url)   "http://s.web2.qq.com"url
 
-#define WEBQQ_D_REF_URL     WEBQQ_D_HOST"/"WEBQQ_PROXY
-#define WEBQQ_S_REF_URL     WEBQQ_S_HOST"/proxy.html?v=201103311002&callback=1"
+#define WEBQQ_D_REF_URL     (SSL__)?\
+                            "https://d.web2.qq.com/cfproxy.html?v=20110331002&callback=1":\
+                            "http://d.web2.qq.com/proxy.html?v=20110331002&callback=1"
+#define WEBQQ_S_REF_URL     WEBQQ_S_HOST("/proxy.html?v=201103311002&callback=1")
 #define WEBQQ_LOGIN_REF_URL WEBQQ_LOGIN_HOST"/proxy.html"
 #define WEBQQ_VERSION_URL   WEBQQ_LOGIN_UI_HOST"/cgi-bin/ver"
 
 #define WEBQQ_LOGIN_LONG_REF_URL(buf) (snprintf(buf,sizeof(buf),\
             WEBQQ_LOGIN_UI_HOST"/cgi-bin/login?daid=164&target=self&style=5&mibao_css=m_webqq&appid=1003903&enable_qlogin=0&no_verifyimg=1&s_url=http%%3A%%2F%%2Fweb2.qq.com%%2Floginproxy.html&f_url=loginerroralert&strong_login=1&login_stat=%d&t=%lu",lc->stat,LTIME),buf)
+#endif
 
 
 #define slist_free_all(list) \
@@ -93,12 +112,19 @@ int lwqq__process_empty(LwqqHttpRequest* req);
     lwqq_http_request_free(req);\
 }while(0);
 
+#define lwqq__log_if_error(err,req) if(err) lwqq_log(LOG_ERROR,"unexpected response \n\thttp:%d, response:\n\t%s\n",\
+		req->http_code,req->response);
+#define lwqq__has_post() (lwqq_verbose(3,"%s\n%s\n",url,post),1),post
+#define lwqq__hasnot_post() (lwqq_verbose(3,"%s\n",url),0),NULL
+#define __LWQQ_API_LEVEL_4__ if(LWQQ_VERBOSE_LEVEL>=4)\
+													lwqq_http_set_option(req, LWQQ_HTTP_VERBOSE,1L);
+
+/** ===================json part==================*/
 #define lwqq__json_get_int(json,k,def) s_atoi(json_parse_simple_value(json,k),def)
 #define lwqq__json_get_long(json,k,def) s_atol(json_parse_simple_value(json,k),def)
 #define lwqq__json_get_value(json,k) s_strdup(json_parse_simple_value(json,k))
 #define lwqq__json_get_string(json,k) json_unescape_s(json_parse_simple_value(json,k))
 #define lwqq__json_parse_child(json,k,sub) sub=json_find_first_label(json,k);if(sub) sub=sub->child;
-//#define lwqq__override(k,v) {char* tmp_ = v;if(tmp_){s_free(k);k=tmp_;}}
 
 //json function expand
 json_t *json_find_first_label_all (const json_t * json, const char *text_label);
