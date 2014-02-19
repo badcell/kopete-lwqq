@@ -607,28 +607,24 @@ void WebqqAccount::ac_group_members(LwqqClient *lc, LwqqGroup *group)
         else
             contactName = QString::fromUtf8(member->nick);
         qDebug()<<"groupname:"<<contactName<<"qq:"<<QString(member->uin)<<QString(group->gid);
-        qDebug()<<"clientid:"<<QString(lc->clientid)<<"seskey"<<QString(lc->seskey)<<"psessionid"<<QString(lc->psessionid);
-        if((buddy = find_buddy_by_uin(lc,member->uin))) {
-            if( !contact(QString(buddy->qqnumber)))
-            {
-                addContact( QString(buddy->qqnumber), contactName,  0L, Kopete::Account::Temporary);
-            }
-            contact(QString(group->gid))->webqq_addcontacts(contact(QString(buddy->qqnumber)));
-        }else{
-            if((buddy = find_buddy_by_qqnumber(lc, accountId().toUtf8().constData())))
-            {
-                qDebug()<<"uin:"<<QString(buddy->uin);
-                if( !contact(QString(member->uin)) && (strcmp(member->uin, buddy->uin) != 0))
+        qDebug()<<"clientid:"<<QString(lc->clientid)<<"uin"<<QString(lc->myself->uin);
+        if(strcmp(lc->myself->uin, member->uin) != 0)
+        {
+            if((buddy = find_buddy_by_uin(lc,member->uin))) {
+                if( !contact(QString(buddy->qqnumber)))
                 {
-                    addContact( QString(member->uin), contactName,  0L, Kopete::Account::Temporary);
+                    addContact( QString(buddy->qqnumber), contactName,  0L, Kopete::Account::Temporary);
                 }
+                contact(QString(group->gid))->webqq_addcontacts(contact(QString(buddy->qqnumber)));
             }else{
+
                 if( !contact(QString(member->uin)))
                 {
                     addContact( QString(member->uin), contactName,  0L, Kopete::Account::Temporary);
                 }
+
+                contact(QString(group->gid))->webqq_addcontacts(contact(QString(member->uin)));
             }
-            contact(QString(group->gid))->webqq_addcontacts(contact(QString(member->uin)));
         }
     }
     contact(QString(group->gid))->set_group_members();

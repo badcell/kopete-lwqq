@@ -273,7 +273,6 @@ static LwqqAsyncEvent* do_login(LwqqClient *lc, const char *md5, LwqqErrorCode *
              "ptlang=2052&daid=164&from_ui=1&pttype=1&dumy=&fp=loginerroralert&"
              "action=2-10-5837&mibao_css=m_webqq&t=1&g=1&js_type=0&js_ver=10034&login_sig=%s",
              lc->username, md5, lc->vc->str,lc->stat,lc->login_sig);
-    fprintf(stderr,"url:%s\n", url);
     req = lwqq_http_create_default_request(lc,url, err);
     /* Setup http header */
     req->set_header(req, "Referer", WEBQQ_LOGIN_LONG_REF_URL(refer));

@@ -91,27 +91,6 @@ void WebqqContact::serialize( QMap< QString, QString > &serializedData, QMap< QS
 
 Kopete::ChatSession* WebqqContact::manager( CanCreateFlags canCreateFlags )
 {
-//	kDebug( 14210 ) ;
-//	if ( m_msgManager )
-//	{
-//		return m_msgManager;
-//	}
-//	else if ( canCreateFlags == CanCreate )
-//	{
-//		QList<Kopete::Contact*> contacts;
-//		contacts.append(this);
-//		Kopete::ChatSession::Form form = ( m_type == Group ?
-//				  Kopete::ChatSession::Chatroom : Kopete::ChatSession::Small );
-//		m_msgManager = Kopete::ChatSessionManager::self()->create(account()->myself(), contacts, protocol(), form );
-//		connect(m_msgManager, SIGNAL(messageSent(Kopete::Message&,Kopete::ChatSession*)),
-//				this, SLOT(sendMessage(Kopete::Message&)) );
-//		connect(m_msgManager, SIGNAL(destroyed()), this, SLOT(slotChatSessionDestroyed()));
-//		return m_msgManager;
-//	}
-//	else
-//	{
-//		return 0;
-//	}
     canCreateFlags = CanCreate;
     if(m_contactType == Contact_Chat)
     {
@@ -148,7 +127,7 @@ Kopete::ChatSession* WebqqContact::manager( CanCreateFlags canCreateFlags )
             Kopete::ContactPtrList contacts;
             contacts.append(this);
             m_groupManager = new WebqqGroupChatSession(protocol(), account()->myself(), contacts);
-            m_groupManager->removeAllContacts();
+            //m_groupManager->removeAllContacts();
             if(m_isGroupDestory)
             {
                 foreach( Kopete::Contact *c, m_groupMebers )
