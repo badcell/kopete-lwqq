@@ -32,7 +32,7 @@
 #include "qq_types.h"
 #include "webqqcontact.h"
 #include "webqqaccount.h"
-static void qq_add_buddy(const char *username);
+static void qq_add_buddy(const char *username, const char *message);
 WebqqAddContactPage::WebqqAddContactPage( QWidget* parent )
 		: AddContactPage(parent)
 {
@@ -53,7 +53,7 @@ bool WebqqAddContactPage::apply( Kopete::Account* a, Kopete::MetaContact* m )
 	if ( validateData() )
 	{
 		QString name = m_webqqAddUI.m_uniqueName->text();
-
+        QString message = m_webqqAddUI.m_invite_message->text();
 		if ( a->addContact(name, m, Kopete::Account::ChangeKABC ) )
 		{
 			WebqqContact * newContact = qobject_cast<WebqqContact*>( Kopete::ContactList::self()->findContact( a->protocol()->pluginId(), a->accountId(), name ) );
@@ -71,8 +71,16 @@ bool WebqqAddContactPage::apply( Kopete::Account* a, Kopete::MetaContact* m )
 
 bool WebqqAddContactPage::validateData()
 {
-    return true;
+    if(m_webqqAddUI.m_uniqueName->text().isEmpty() || m_webqqAddUI.m_invite_message->text().isEmpty())
+    {
+        QString message = i18n( "Please input all ");
+        KMessageBox::queuedMessageBox(Kopete::UI::Global::mainWidget(), KMessageBox::Error, message);
+        return false;
+    }else
+        return true;
 }
+
+#if 1
 
 static void show_confirm_table(LwqqClient* lc,LwqqConfirmTable* table)
 {
@@ -180,7 +188,7 @@ static void search_buddy_receipt(LwqqAsyncEvent* ev,LwqqBuddy* buddy,char* uni_i
     int err = ev->result;
     LwqqClient* lc = ev->lc;
     qq_account* ac = lc->data;
-    QString message;
+    QString msg;
     //captcha wrong
     if(err == 10000){
         LwqqAsyncEvent* event = lwqq_info_search_friend(lc,uni_id,buddy);
@@ -188,14 +196,14 @@ static void search_buddy_receipt(LwqqAsyncEvent* ev,LwqqBuddy* buddy,char* uni_i
         return;
     }
     if(err == LWQQ_EC_NO_RESULT){
-        message = i18n( "Account not exists or not main display account");
-        KMessageBox::queuedMessageBox(Kopete::UI::Global::mainWidget(), KMessageBox::Error, message);
+        msg = i18n( "Account not exists or not main display account");
+        KMessageBox::queuedMessageBox(Kopete::UI::Global::mainWidget(), KMessageBox::Error, msg);
         //purple_notify_message(ac->gc,PURPLE_NOTIFY_MSG_INFO,_("Error Message"),_("Account not exists or not main display account"),NULL,NULL,NULL);
         goto failed;
     }
     if(!buddy->token){
-        message = i18n( "Get friend infomation failed");
-        KMessageBox::queuedMessageBox(Kopete::UI::Global::mainWidget(), KMessageBox::Error, message);
+        msg = i18n( "Get friend infomation failed");
+        KMessageBox::queuedMessageBox(Kopete::UI::Global::mainWidget(), KMessageBox::Error, msg);
         //purple_notify_message(ac->gc,PURPLE_NOTIFY_MSG_INFO,_("Error Message"),_("Get friend infomation failed"),NULL,NULL,NULL);
         goto failed;
     }
@@ -214,7 +222,7 @@ failed:
     s_free(uni_id);
 }
 
-void qq_add_buddy(const char *username)
+void qq_add_buddy(const char *username, const char *message)
 {
 //    LwqqBuddy* buddy = lwqq_buddy_new();
 //    const char *passwd = "XXX";
@@ -251,9 +259,9 @@ void qq_add_buddy(const char *username)
     }else{
         //friend->qqnumber = s_strdup(qqnum);
         LwqqAsyncEvent* ev = lwqq_info_search_friend(ac->qq,uni_id,f_buddy);
-        const char* msg = NULL;
+        const char* msg = message;
         lwqq_async_add_event_listener(ev, _C_(4p,search_buddy_receipt,ev,f_buddy,s_strdup(uni_id),s_strdup(msg)));
 }
-
+#endif
 
 #include "webqqaddcontactpage.moc"
