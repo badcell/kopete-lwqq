@@ -76,7 +76,12 @@ public:
 	
 	
 	void initCategory();
-	
+    /**
+      *
+      */
+    enum Find_Type{Buddy, Group};
+    void find_add_contact(const QString name, Find_Type type );
+
 	/*
 	* instance of LwqqClient
 	*/
@@ -117,7 +122,7 @@ public slots:
     void ac_group_avatar(LwqqClient *lc, LwqqGroup *group);
     void ac_group_members(LwqqClient *lc, LwqqGroup *group);
 	void ac_qq_msg_check(LwqqClient *lc);
-	
+    void ac_show_confirm_table(LwqqClient* lc,LwqqConfirmTable* table);
 	void slotReceivedInstanceSignal(CallbackObject cb);
 	
 	void pollMessage();
@@ -195,6 +200,7 @@ static void cb_friend_avatar(LwqqClient *lc, LwqqBuddy *buddy);
 static void cb_group_avatar(LwqqClient *lc, LwqqGroup *group);
 static void cb_group_members(LwqqClient *lc, LwqqGroup *group);
 static void cb_qq_msg_check(LwqqClient* lc);
+static void cb_show_confirm_table(LwqqClient* lc,LwqqConfirmTable* table);
 
 static void cb_friend_come(LwqqClient* lc, LwqqBuddy **buddy);
 static void cb_group_come(LwqqClient* lc, LwqqGroup **group);
