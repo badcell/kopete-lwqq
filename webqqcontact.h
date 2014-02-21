@@ -95,9 +95,8 @@ public:
     void setContactType(ConType type);
     void webqq_addcontacts(Kopete::Contact *others);
     void set_group_members();
-    /*
-     * Returns a contact of name @p id
-     */
+
+    void clean_contact();
 
 
 public slots:
@@ -113,6 +112,7 @@ public slots:
 	 */
 	void receivedMessage( const QString &message );
 
+    virtual void deleteContact();
 protected slots:
 	/**
 	 * Show the settings dialog

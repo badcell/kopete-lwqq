@@ -81,7 +81,6 @@ public:
       */
     enum Find_Type{Buddy, Group};
     void find_add_contact(const QString name, Find_Type type );
-
 	/*
 	* instance of LwqqClient
 	*/
@@ -92,6 +91,7 @@ public:
 	void buddy_message(LwqqClient* lc,LwqqMsgMessage* msg);
     void group_message(LwqqClient* lc,LwqqMsgMessage* msg);
     WebqqContact *contact(const QString &id);
+    bool isOffline();
 public slots:
 	/**
 	 * Called by the server when it has a message for us.
@@ -176,6 +176,10 @@ private:
      * init client events
      */
     void init_client_events(LwqqClient* lc);
+    /*
+     * clean all contact
+     */
+    void cleanAll_contacts();
 
     QString m_username;
     QString m_password;

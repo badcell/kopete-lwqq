@@ -22,7 +22,7 @@
 #include <kaction.h>
 #include <kdebug.h>
 #include <klocale.h>
-
+#include <kmessagebox.h>
 #include "kopeteaccount.h"
 #include "kopetegroup.h"
 #include "kopetechatsession.h"
@@ -191,6 +191,37 @@ void WebqqContact::showContactSettings()
 {
 	//WebqqContactSettings* p = new WebqqContactSettings( this );
 	//p->show();
+}
+
+void WebqqContact::deleteContact()
+{
+    if (!(((WebqqAccount*)account())->isOffline()))
+    {
+        qDebug()<<"delete is connect";
+        if(m_type == Contact_Chat)
+        {
+            LwqqClient* lc = ((WebqqAccount*)account())->m_lc;
+            LwqqBuddy* buddy = find_buddy_by_qqnumber(lc, m_userId.toUtf8().constData());
+            if(buddy == NULL)
+                return;
+            lwqq_info_delete_friend(lc, buddy , LWQQ_DEL_FROM_OTHER);
+            deleteLater ();
+        }
+    }
+    else
+    {
+        qDebug()<<"not connect";
+        KMessageBox::error (Kopete::UI::Global::mainWidget (),
+                            i18n
+                            ("<qt>You need to go online to remove a contact from your contact list. This contact will appear again when you reconnect.</qt>"),
+                            i18n ("Webqq Plugin"));
+    }
+}
+
+void WebqqContact::clean_contact()
+{
+    qDebug()<<"delete later";
+    deleteLater ();
 }
 
 void WebqqContact::setDisplayPicture(const QByteArray &data)

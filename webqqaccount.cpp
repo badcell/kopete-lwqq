@@ -96,10 +96,11 @@ WebqqAccount::WebqqAccount( WebqqProtocol *parent, const QString& accountID )
 	// Init the myself contact
 	setMyself( new WebqqContact( this, accountId(), accountId(), Kopete::ContactList::self()->myself() ) );
 	myself()->setOnlineStatus( m_protocol->WebqqOffline ); 
-	
+
 	/*init lwqq account*/
 	//initLwqqAccount();
-	
+    fprintf(stderr, "clen alll\n");
+    this->cleanAll_contacts();
 	m_targetStatus = Kopete::OnlineStatus::Offline;
 	
     QString filename = "/home/zj/497717277.png";
@@ -1349,6 +1350,14 @@ void WebqqAccount::connectWithPassword( const QString &passwd )
 	
 }
 
+bool WebqqAccount::isOffline()
+{
+    if(m_targetStatus == Kopete::OnlineStatus::Offline)
+        return true;
+    else
+        return false;
+}
+
 void WebqqAccount::disconnect()
 {
 	kDebug ( 14210 ) ;
@@ -1479,6 +1488,20 @@ void WebqqAccount::find_add_contact(const QString name, Find_Type type)
     }else if(type == Group)
     {
 
+    }
+}
+
+void WebqqAccount::cleanAll_contacts()
+{
+
+    QHashIterator<QString, Kopete::Contact*>itr( contacts() );
+    qDebug()<<"cleanAll_contacts"<<contacts().size();
+    while(itr.hasNext())
+    {
+        itr.next();
+        WebqqContact * contact = dynamic_cast<WebqqContact *>(itr.value());
+        qDebug()<<"key:"<<itr.key();
+        contact->clean_contact();
     }
 }
 
@@ -1635,7 +1658,7 @@ static void get_friends_info_retry(LwqqClient* lc,LwqqHashFunc hashtry)
 }
 
 //find buddy and group ,add they
-#if 1
+#if 0
 
 static void confirm_table_yes(LwqqConfirmTable* table,PurpleRequestFields* fields)
 {
@@ -1722,7 +1745,7 @@ static void add_friend(LwqqClient* lc,LwqqConfirmTable* c,LwqqBuddy* b,char* mes
         LwqqConfirmTable* ask = s_malloc0(sizeof(*ask));
         ask->input_label = s_strdup(_("Invite Message"));
         ask->cmd = _C_(3p,add_friend_ask_message,lc,ask,b);
-        show_confirm_table(lc, ask);
+        cb_show_confirm_table(lc, ask);
         lwqq_ct_free(c);
         return ;
     }else{
@@ -1791,7 +1814,7 @@ static void search_buddy_receipt(LwqqAsyncEvent* ev,LwqqBuddy* buddy,char* uni_i
     format_body_from_buddy(body,sizeof(body),buddy);
     confirm->body = s_strdup(body);
     confirm->cmd = _C_(4p,add_friend,lc,confirm,buddy,message);
-    show_confirm_table(lc,confirm);
+    cb_show_confirm_table(lc,confirm);
     s_free(uni_id);
     return;
 failed:
