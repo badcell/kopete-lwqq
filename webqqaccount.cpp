@@ -877,7 +877,6 @@ void WebqqAccount::friend_come(LwqqClient* lc,LwqqBuddy* buddy)
     
     WebqqContact * addedContact = dynamic_cast<WebqqContact *>(contacts().value( QString(buddy->qqnumber) ));
     addedContact->setContactType(WebqqContact::Contact_Chat);
-    myself()->setOnlineStatus( m_targetStatus );
 //    QByteArray data;
 //    data.clear();
 //    addedContact->setDisplayPicture(data);
@@ -1181,7 +1180,7 @@ void WebqqAccount::ac_login_stage_3(LwqqClient* lc)
         discu_come(lc,discu);
     }
 */
-
+    myself()->setOnlineStatus( m_targetStatus );
     ac->state = LOAD_COMPLETED;
     LwqqPollOption flags = POLL_AUTO_DOWN_DISCU_PIC|POLL_AUTO_DOWN_GROUP_PIC|POLL_AUTO_DOWN_BUDDY_PIC;
     if(ac->flag& REMOVE_DUPLICATED_MSG)
@@ -1243,6 +1242,7 @@ void WebqqAccount::ac_login_stage_f(LwqqClient* lc)
         }
     }
     lwdb_userdb_commit(ac->db);
+    myself()->setOnlineStatus( m_targetStatus );
 }
 
 
@@ -1490,19 +1490,17 @@ void WebqqAccount::find_add_contact(const QString name, Find_Type type)
 
     }
 }
-
+//clean all contacts and groups
 void WebqqAccount::cleanAll_contacts()
 {
+    QList<Kopete::Group*> groupList = Kopete::ContactList::self()->groups();
+    QList<Kopete::MetaContact *> metaContactList =  Kopete::ContactList::self()->metaContacts();
+    foreach ( Kopete::MetaContact* metaContact, metaContactList )
+        Kopete::ContactList::self()->removeMetaContact( metaContact );
 
-    QHashIterator<QString, Kopete::Contact*>itr( contacts() );
-    qDebug()<<"cleanAll_contacts"<<contacts().size();
-    while(itr.hasNext())
-    {
-        itr.next();
-        WebqqContact * contact = dynamic_cast<WebqqContact *>(itr.value());
-        qDebug()<<"key:"<<itr.key();
-        contact->clean_contact();
-    }
+    foreach ( Kopete::Group* group, groupList )
+        Kopete::ContactList::self()->removeGroup( group );
+
 }
 
 void WebqqAccount::ac_show_confirm_table(LwqqClient *lc, LwqqConfirmTable *table)

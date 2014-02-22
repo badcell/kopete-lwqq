@@ -33,7 +33,7 @@
 #include "kopeteview.h"
 #include "kopetetransfermanager.h"
 #include "kopeteavatarmanager.h"
-
+#include "kopetedeletecontacttask.h"
 #include "webqqaccount.h"
 #include "webqqfakeserver.h"
 #include "webqqprotocol.h"
@@ -195,6 +195,7 @@ void WebqqContact::showContactSettings()
 
 void WebqqContact::deleteContact()
 {
+    qDebug()<<"delete contact!!!!!!!!!!!!!!!!!!!!!";
     if (!(((WebqqAccount*)account())->isOffline()))
     {
         qDebug()<<"delete is connect";
@@ -221,7 +222,8 @@ void WebqqContact::deleteContact()
 void WebqqContact::clean_contact()
 {
     qDebug()<<"delete later";
-    deleteLater ();
+    Kopete::DeleteContactTask *deleteTask = new Kopete::DeleteContactTask(this);
+    deleteTask->start();
 }
 
 void WebqqContact::setDisplayPicture(const QByteArray &data)
