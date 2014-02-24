@@ -181,6 +181,8 @@ private:
      */
     void cleanAll_contacts();
 
+    QString stransMsg(const QString &message);
+
     QString m_username;
     QString m_password;
     

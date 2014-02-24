@@ -396,9 +396,56 @@ void WebqqAccount::buddy_message(LwqqClient* lc,LwqqMsgMessage* msg)
     if ( !contact)
 	return;
     
-    contact->receivedMessage( QString::fromUtf8(buf) );
+    contact->receivedMessage(stransMsg(QString::fromUtf8(buf)));
     
     //serv_got_im(pc, local_id, buf, PURPLE_MESSAGE_RECV, msg->time);
+}
+
+QString WebqqAccount::stransMsg(const QString &message)
+{
+    QString reMsg;
+    int pos = 0;
+    int endPos = 0;
+    int size = 0;
+    int msgPos = 0;
+    qDebug()<<"strans:"<<message;
+    reMsg = "<span style=\" ";
+    if((pos = message.indexOf("face=\"")) >= 0)
+    {
+        size = QString("face=\"").size();
+        endPos = message.indexOf("\"", pos + size);
+        reMsg +=" font-family:'" + message.mid(pos + size, endPos - pos - size ) + "';";
+        msgPos = pos;
+    }
+    if(message.indexOf("<b>") >= 0)
+        reMsg += "font-weight:600;";
+    if(message.indexOf("<i>") >= 0)
+        reMsg += " font-style:italic;";
+    if(message.indexOf("<u>") >= 0)
+        reMsg += " text-decoration: underline;";
+    if((pos = message.indexOf("color=\"#")) >= 0)
+    {
+        size = QString("color=\"#").size();
+        reMsg += " color:#" + message.mid(pos+size, 6) + ";" ;
+        msgPos = pos;
+    }
+
+    if((pos = message.indexOf("size=\"")) >= 0)
+    {
+        size = QString("size=\"").size();
+        endPos = message.indexOf("\"", pos + size);
+        reMsg +=" font-size:" + message.mid(pos + size, endPos - pos - size ) + "pt;";
+        msgPos = pos;
+    }
+    reMsg += "\">";
+    if((pos = message.indexOf(">", msgPos)) >= 0)
+    {
+        endPos = message.indexOf("</font>", pos);
+        size = QString(">").size();
+        reMsg +=message.mid(pos + size, endPos - pos - size ) + "</span>";
+    }
+    qDebug()<<"reMsg:"<<reMsg;
+    return reMsg;
 }
 
 void WebqqAccount::group_message(LwqqClient *lc, LwqqMsgMessage *msg)
@@ -427,11 +474,12 @@ void WebqqAccount::group_message(LwqqClient *lc, LwqqMsgMessage *msg)
         sendId = QString(msg->group.send);
     Kopete::Message kmsg( contact(sendId), justMe );
     //kmsg.setTimestamp( QString(msg->time) );
-    qDebug()<<"group message:"<<QString::fromUtf8(buf);
-    kmsg.setHtmlBody( QString::fromUtf8(buf) );
+    //qDebug()<<"group message:"<<stransMsg(QString::fromUtf8(buf));
+    kmsg.setHtmlBody( stransMsg(QString::fromUtf8(buf)) );
     kmsg.setDirection( Kopete::Message::Inbound );
 
     chatContact->groupSession()->appendMessage(kmsg);
+    qDebug()<<"appendMessage";
 }
 
 void WebqqAccount::ac_qq_msg_check(LwqqClient *lc)
