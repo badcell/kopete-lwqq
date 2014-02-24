@@ -97,7 +97,7 @@ public:
     void set_group_members();
 
     void clean_contact();
-
+    static QString prepareMessage(const QString &messageText , const QString &plainText);
 
 public slots:
 	/**

@@ -427,6 +427,7 @@ void WebqqAccount::group_message(LwqqClient *lc, LwqqMsgMessage *msg)
         sendId = QString(msg->group.send);
     Kopete::Message kmsg( contact(sendId), justMe );
     //kmsg.setTimestamp( QString(msg->time) );
+    qDebug()<<"group message:"<<QString::fromUtf8(buf);
     kmsg.setHtmlBody( QString::fromUtf8(buf) );
     kmsg.setDirection( Kopete::Message::Inbound );
 

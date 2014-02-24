@@ -195,7 +195,6 @@ void WebqqContact::showContactSettings()
 
 void WebqqContact::deleteContact()
 {
-    qDebug()<<"delete contact!!!!!!!!!!!!!!!!!!!!!";
     if (!(((WebqqAccount*)account())->isOffline()))
     {
         qDebug()<<"delete is connect";
@@ -315,15 +314,10 @@ void WebqqContact::sendMessage( Kopete::Message &message )
 {
 	kDebug( 14210 ) ;
 
-	/*this is for test*/
-	 qDebug() << "msg:" << message.plainBody();
-     qDebug() << "html msg:" << message.getHtmlStyleAttribute();
-     qDebug()<<"escapedBody"<<message.escapedBody();
-     qDebug()<<"parsedBody" << message.parsedBody();
-	//first prepare message
+	/*this is for test*/    
 	QString targetQQNumber = message.to().first()->contactId();
     qDebug()<<"member:"<<targetQQNumber<<"userid"<<m_userId;
-	QString messageStr = message.plainBody();
+    QString messageStr = message.format() ==  Qt::RichText?prepareMessage(message.parsedBody(), message.plainBody()) :message.plainBody();
     if(m_contactType == Contact_Group || m_contactType == Contact_Discu)
         qq_send_chat(m_userId.toUtf8().constData(), messageStr.toUtf8().constData());
     else
@@ -335,6 +329,53 @@ void WebqqContact::sendMessage( Kopete::Message &message )
     manager(CanCreate)->messageSucceeded();
 }
 
+QString WebqqContact::prepareMessage(const QString &messageText, const QString &plainText)
+{
+    QString newMsg( messageText );
+    QString reMsg;
+    int pos = 0;
+    int endPos = 0;
+    int size =0;
+    if(newMsg.indexOf("font-weight:600") >= 0)
+        reMsg = "<b>";
+    if(newMsg.indexOf("font-style:italic") >= 0)
+        reMsg += "<i>";
+    if(newMsg.indexOf("text-decoration:underline") >= 0)
+        reMsg += "<u>";
+    if((pos = newMsg.indexOf("color:#")) >= 0)
+    {
+    size = QString("color:#").size();
+    reMsg += "<font color=\"#" + newMsg.mid(pos+size, 6) + "\">" ;
+    }
+    if((pos = newMsg.indexOf("font-family:'")) >= 0)
+    {
+    endPos = newMsg.indexOf("';");
+    size = QString("font-family:'").size();
+    reMsg +="<font face=\"" + newMsg.mid(pos + size, endPos - pos - size ) + "\">";
+    }
+    if((pos = newMsg.indexOf("font-size:")) >= 0)
+    {
+        endPos = newMsg.indexOf("pt;");
+        size = QString("font-size:").size();
+        reMsg +="<font size=\"" + newMsg.mid(pos + size, endPos - pos - size ) + "\">";
+    }
+    reMsg += plainText;
+    if(reMsg.indexOf("color=") >= 0)
+        reMsg +="</font>";
+    if(reMsg.indexOf("face=") >= 0)
+        reMsg +="</font>";
+    if(reMsg.indexOf("size=") >= 0)
+        reMsg +="</font>";
+    if(newMsg.indexOf("text-decoration:") >= 0)
+        reMsg += "</u>";
+    if(newMsg.indexOf("font-style:italic") >= 0)
+        reMsg += "</i>";
+    if(newMsg.indexOf("font-weight:600") >= 0)
+        reMsg += "</b>";
+    qDebug()<<"**********:"<<reMsg;
+
+    return reMsg;
+}
 
 static void cb_send_receipt(LwqqAsyncEvent* ev,LwqqMsg* msg,char* serv_id,char* what)
 {

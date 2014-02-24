@@ -236,7 +236,8 @@ static LwqqMsgContent* build_string_content(const char* from,const char* to,Lwqq
                     const char *end = strchr(value,'"');
                     if(strncmp(key,"size",4)==0){
                         int size = atoi(value);
-                        msg->f_size = sizemap(size);
+                        //msg->f_size = sizemap(size);
+                        msg->f_size = size;
                     }else if(strncmp(key,"color",5)==0){
                         strncpy(msg->f_color,value+1,6);
                         msg->f_color[6] = '\0';
@@ -321,6 +322,7 @@ static size_t img_filebuffer(const char *file, char *buffer)
 }
 
 
+
 int translate_message_to_struct(LwqqClient* lc,const char* to,const char* what,LwqqMsg* msg,int using_cface)
 {
     const char* ptr = what;
@@ -383,21 +385,29 @@ int translate_message_to_struct(LwqqClient* lc,const char* to,const char* what,L
 //                            img_filebuffer(fileName),
 //                            img_filesize(fileName));
             }
-        }/*else if(strstr(begin,"[FACE")==begin){
-            //processing face
-            sscanf(begin,"[FACE_%d]",&img_id);
-            c = build_face_direct(img_id);
-        }else if(strstr(begin,"[TOGGLEFACE]")==begin){
-            translate_face=!translate_face;
-        }else if(begin[0]=='&'){
-        }else if(begin[0]=='/'){
-            c = translate_face?build_face_content(m.begin, m.len):NULL;
-            if(c==NULL) c = build_string_content(begin, end, mmsg);
+       }else if(*begin==':'&&*(end-1)==':'){
+                fprintf(stderr, "face::::::");
+//            if(strstr(begin,":face")==begin){
+//                sscanf(begin,":face%d:",&img_id);
+//                c = build_face_direct(img_id);
+//            }else if(strstr(begin,":-face:")==begin){
+//                translate_face=!translate_face;
+//            }else{
+//                //other :faces:
+//                c = translate_face?build_face_content(m.begin, m.len):NULL;
+//                if(c==NULL) c = build_string_content(begin, end, mmsg);
+//            }
+        }else if(begin[0]==':'){
+            fprintf(stderr, "begin[0]");
+//            //other :)
+//            c = translate_face?build_face_content(m.begin, m.len):NULL;
+//            if(c==NULL) c = build_string_content(begin, end, mmsg);
+       }else if(begin[0]=='&'){
         }else{
-            //other face
-            c = translate_face?build_face_content(m.begin,m.len):NULL;
+//            //other face with no fix style
+            //c = translate_face?build_face_content(m.begin,m.len):NULL;
             if(c==NULL) c = build_string_content(begin, end, mmsg);
-        }*/
+        }
 #endif
         ptr = end;
         if(c!=NULL)
@@ -457,7 +467,7 @@ void translate_struct_to_message(qq_account* ac, LwqqMsgMessage* msg, char* buf)
     if(!(ac->flag&IGNORE_FONT_FACE)&&msg->f_name)
         snprintf(buf+strlen(buf),300,"face=\"%s\" ",msg->f_name);
     if(!(ac->flag&IGNORE_FONT_SIZE))
-        snprintf(buf+strlen(buf),300,"size=\"%d\" ",sizeunmap(msg->f_size));
+        snprintf(buf+strlen(buf),300,"size=\"%d\" ",msg->f_size);
     strcat(buf,">");
     
     TAILQ_FOREACH(c, &msg->content, entries) {
@@ -466,7 +476,7 @@ void translate_struct_to_message(qq_account* ac, LwqqMsgMessage* msg, char* buf)
                 paste_content_string(c->data.str,buf+strlen(buf));
                 break;
             case LWQQ_CONTENT_FACE:
-                strcat(buf,translate_smile(c->data.face));
+                //strcat(buf,translate_smile(c->data.face));
                 break;
 #if 1
             case LWQQ_CONTENT_OFFPIC:

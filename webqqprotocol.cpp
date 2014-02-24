@@ -73,6 +73,7 @@ WebqqProtocol::WebqqProtocol( QObject* parent, const QVariantList &/*args*/ )
 	kDebug( 14210 ) ;
 
 	s_protocol = this;
+    setCapabilities( FullRTF);
 }
 
 WebqqProtocol::~WebqqProtocol()
