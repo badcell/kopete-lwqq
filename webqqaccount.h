@@ -43,6 +43,8 @@ namespace Kopete
 class WebqqProtocol;
 class QByteArray;
 class WebqqContact;
+
+
 /**
  * This represents an account connected to the webqq
  * @author Will Stephenson
@@ -80,7 +82,7 @@ public:
       *
       */
     enum Find_Type{Buddy, Group};
-    void find_add_contact(const QString name, Find_Type type );
+    void find_add_contact(const QString name, Find_Type type ,Kopete::MetaContact* m );
 	/*
 	* instance of LwqqClient
 	*/
@@ -123,6 +125,7 @@ public slots:
     void ac_group_members(LwqqClient *lc, LwqqGroup *group);
 	void ac_qq_msg_check(LwqqClient *lc);
     void ac_show_confirm_table(LwqqClient* lc,LwqqConfirmTable* table);
+    void ac_show_messageBox(msg_type type, const char *title, const char *message);
 	void slotReceivedInstanceSignal(CallbackObject cb);
 	
 	void pollMessage();
@@ -207,7 +210,7 @@ static void cb_group_avatar(LwqqClient *lc, LwqqGroup *group);
 static void cb_group_members(LwqqClient *lc, LwqqGroup *group);
 static void cb_qq_msg_check(LwqqClient* lc);
 static void cb_show_confirm_table(LwqqClient* lc,LwqqConfirmTable* table);
-
+static void cb_show_messageBox(msg_type type, const char *title, const char *message);
 static void cb_friend_come(LwqqClient* lc, LwqqBuddy **buddy);
 static void cb_group_come(LwqqClient* lc, LwqqGroup **group);
 static void cb_lost_connection(LwqqClient* lc);
@@ -216,7 +219,7 @@ static void cb_delete_group_local(LwqqClient* lc, const LwqqGroup **g);
 static void cb_flush_group_members(LwqqClient* lc, LwqqGroup **g);
 
 
-
+static void system_message(LwqqClient* lc,LwqqMsgSystem* system,LwqqBuddy* buddy);
 static char* hash_with_local_file(const char* uin,const char* ptwebqq,void* js);
 static char* hash_with_remote_file(const char* uin,const char* ptwebqq,void* js);
 static void friends_valid_hash(LwqqAsyncEvent* ev,LwqqHashFunc last_hash);

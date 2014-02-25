@@ -317,7 +317,9 @@ void WebqqContact::sendMessage( Kopete::Message &message )
 	/*this is for test*/    
 	QString targetQQNumber = message.to().first()->contactId();
     qDebug()<<"member:"<<targetQQNumber<<"userid"<<m_userId;
+    qDebug()<<"parsedBody:"<<message.parsedBody();
     QString messageStr = message.format() ==  Qt::RichText?prepareMessage(message.parsedBody(), message.plainBody()) :message.plainBody();
+    qDebug()<<"send text:"<<messageStr;
     if(m_contactType == Contact_Group || m_contactType == Contact_Discu)
         qq_send_chat(m_userId.toUtf8().constData(), messageStr.toUtf8().constData());
     else
@@ -340,7 +342,7 @@ QString WebqqContact::prepareMessage(const QString &messageText, const QString &
         reMsg = "<b>";
     if(newMsg.indexOf("font-style:italic") >= 0)
         reMsg += "<i>";
-    if(newMsg.indexOf("text-decoration:underline") >= 0)
+    if(newMsg.indexOf("text-decoration:") >= 0)
         reMsg += "<u>";
     if((pos = newMsg.indexOf("color:#")) >= 0)
     {
@@ -372,8 +374,6 @@ QString WebqqContact::prepareMessage(const QString &messageText, const QString &
         reMsg += "</i>";
     if(newMsg.indexOf("font-weight:600") >= 0)
         reMsg += "</b>";
-    qDebug()<<"**********:"<<reMsg;
-
     return reMsg;
 }
 

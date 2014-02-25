@@ -398,10 +398,10 @@ int translate_message_to_struct(LwqqClient* lc,const char* to,const char* what,L
 //                if(c==NULL) c = build_string_content(begin, end, mmsg);
 //            }
         }else if(begin[0]==':'){
-            fprintf(stderr, "begin[0]");
+
 //            //other :)
 //            c = translate_face?build_face_content(m.begin, m.len):NULL;
-//            if(c==NULL) c = build_string_content(begin, end, mmsg);
+            if(c==NULL) c = build_string_content(begin, end, mmsg);
        }else if(begin[0]=='&'){
         }else{
 //            //other face with no fix style
@@ -476,7 +476,7 @@ void translate_struct_to_message(qq_account* ac, LwqqMsgMessage* msg, char* buf)
                 paste_content_string(c->data.str,buf+strlen(buf));
                 break;
             case LWQQ_CONTENT_FACE:
-                //strcat(buf,translate_smile(c->data.face));
+                strcat(buf,translate_smile(c->data.face));
                 break;
 #if 1
             case LWQQ_CONTENT_OFFPIC:
@@ -720,7 +720,7 @@ void translate_global_free()
 }
 const char* translate_smile(int face)
 {
-#if 0
+#if 1
     static char buf[64];
     struct smile_entry* entry = &smile_tables[0];
     while(entry->id != face&&entry->id!=-1){

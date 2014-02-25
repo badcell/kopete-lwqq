@@ -19,15 +19,18 @@ typedef enum  {
   QQ_MSG_CHECK,/*call ac_qq_msg_check(LwqqClient* lc)*/
   GROUP_MEMBERS,/*call ac_group_members(LwqqClient* lc, LwqqGroup *group)*/
   SHOW_CONFIRM,/*call ac_show_confirm_table(LwqqClient* lc,LwqqConfirmTable* table);*/
+  SHOW_MESSAGE,
   
 }CallbackFunctionType;
 
+enum msg_type{ MSG_INFO,  MSG_ERROR, MSG_WARNING};
 
 typedef  struct CallbackObject {
   
   void *ptr1;
   void *ptr2;
   void *ptr3;
+  msg_type type;
   LwqqErrorCode err;
   CallbackFunctionType fun_t;
 }CallbackObject;

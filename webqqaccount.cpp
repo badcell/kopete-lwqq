@@ -79,7 +79,7 @@
 #include "translate.h"
 
 #include "webqqaccount.h"
-
+#include "webqqshowgetinfo.h"
 
 
 #define OPEN_URL(var,url) snprintf(var,sizeof(var),"xdg-open '%s'",url);
@@ -367,6 +367,12 @@ void WebqqAccount::slotReceivedInstanceSignal(CallbackObject cb)
       LwqqClient *lc = (LwqqClient*)(cb.ptr1);
       LwqqConfirmTable *table = (LwqqConfirmTable*)(cb.ptr2);
       this->ac_show_confirm_table(lc, table);
+  }else if(cb.fun_t == SHOW_MESSAGE)
+  {
+      msg_type type = cb.type;
+      const char *title = (const char*)(cb.ptr1);
+      const char *msg = (const char *)(cb.ptr2);
+      this->ac_show_messageBox(type, title, msg);
   }
   
   
@@ -444,6 +450,7 @@ QString WebqqAccount::stransMsg(const QString &message)
         size = QString(">").size();
         reMsg +=message.mid(pos + size, endPos - pos - size ) + "</span>";
     }
+
     qDebug()<<"reMsg:"<<reMsg;
     return reMsg;
 }
@@ -474,12 +481,11 @@ void WebqqAccount::group_message(LwqqClient *lc, LwqqMsgMessage *msg)
         sendId = QString(msg->group.send);
     Kopete::Message kmsg( contact(sendId), justMe );
     //kmsg.setTimestamp( QString(msg->time) );
-    //qDebug()<<"group message:"<<stransMsg(QString::fromUtf8(buf));
-    kmsg.setHtmlBody( stransMsg(QString::fromUtf8(buf)) );
+    qDebug()<<"group message:"<<QString::fromUtf8(buf);
+    kmsg.setHtmlBody(stransMsg(QString::fromUtf8(buf)));
     kmsg.setDirection( Kopete::Message::Inbound );
 
     chatContact->groupSession()->appendMessage(kmsg);
-    qDebug()<<"appendMessage";
 }
 
 void WebqqAccount::ac_qq_msg_check(LwqqClient *lc)
@@ -529,17 +535,17 @@ void WebqqAccount::ac_qq_msg_check(LwqqClient *lc)
                 //kick_message(lc,(LwqqMsgKickMessage*)msg->msg);
                 break;
             case LWQQ_MT_SYSTEM:
-#if 0	      
+#if 1
                 sys_msg = (LwqqMsgSystem*)msg->msg;
                 if(sys_msg->type == VERIFY_REQUIRED){
                     msg->msg = NULL;
                     LwqqBuddy* buddy = lwqq_buddy_new();
                     LwqqAsyncEvent* ev = lwqq_info_get_stranger_info(
                             lc, sys_msg->super.from, buddy);
-                    //lwqq_async_add_event_listener(ev, 
-                    //        _C_(3p,system_message,lc,sys_msg,buddy));
+                    lwqq_async_add_event_listener(ev,
+                            _C_(3p,system_message,lc,sys_msg,buddy));
                 }else{
-                    //system_message(lc,(LwqqMsgSystem*)msg->msg,NULL);
+                    system_message(lc,(LwqqMsgSystem*)msg->msg,NULL);
                 }
 #endif 
                 break;
@@ -1529,7 +1535,7 @@ void WebqqAccount::updateContactStatus()
 	}
 }
 
-void WebqqAccount::find_add_contact(const QString name, Find_Type type)
+void WebqqAccount::find_add_contact(const QString name, Find_Type type, Kopete::MetaContact *m)
 {
     if(type == Buddy)
     {
@@ -1553,6 +1559,16 @@ void WebqqAccount::cleanAll_contacts()
 }
 
 void WebqqAccount::ac_show_confirm_table(LwqqClient *lc, LwqqConfirmTable *table)
+{
+    if(table->body){
+        ShowGetInfoDialog *dlg = new ShowGetInfoDialog();
+        dlg->setAddInfo(QString(table->body));
+        dlg->exec();
+
+    }
+}
+
+void WebqqAccount::ac_show_messageBox(msg_type type, const char *title, const char *message)
 {
 
 }
@@ -1648,6 +1664,61 @@ void cb_show_confirm_table(LwqqClient *lc, LwqqConfirmTable *table)
     ObjectInstance::instance()->callSignal(cb);
 }
 
+void cb_show_messageBox(msg_type type, const char *title, const char *message)
+{
+    CallbackObject cb;
+    cb.fun_t = SHOW_MESSAGE;
+    cb.ptr1 = (void *)title;
+    cb.ptr2 = (void*)message;
+    cb.type = type;
+    ObjectInstance::instance()->callSignal(cb);
+}
+
+static void verify_required_confirm(LwqqClient* lc,char* account,LwqqConfirmTable* ct)
+{
+    if(ct->answer == LWQQ_NO)
+        lwqq_info_answer_request_friend(lc, account, ct->answer, ct->input);
+    else if(ct->answer == LWQQ_IGNORE){
+        //ignore it.
+    }else
+        lwqq_info_answer_request_friend(lc, account, ct->answer, NULL);
+    lwqq_ct_free(ct);
+    s_free(account);
+}
+
+static void system_message(LwqqClient* lc,LwqqMsgSystem* system,LwqqBuddy* buddy)
+{
+    qq_account* ac = lwqq_client_userdata(lc);
+    char buf1[256]={0};
+    if(system->type == VERIFY_REQUIRED) {
+        char buf2[2048];
+        LwqqConfirmTable* ct = s_malloc0(sizeof(*ct));
+        ct->title = s_strdup(_("Friend Confirm"));
+        snprintf(buf2,sizeof(buf2),
+                _("%s\nRequest as your friend\nAdditional Reason:%s\n\n"),system->account,system->verify_required.msg);
+        format_body_from_buddy(buf2,sizeof(buf2),buddy);
+        ct->body = s_strdup(buf2);
+        ct->exans_label = s_strdup(_("Agree and add back"));
+        ct->input_label = s_strdup(_("Refuse reason"));
+        ct->flags = LWQQ_CT_ENABLE_IGNORE;
+        ct->cmd = _C_(3p,verify_required_confirm,lc,s_strdup(system->account),ct);
+        cb_show_confirm_table(lc, ct);
+        lwqq_buddy_free(buddy);
+        lwqq_msg_free((LwqqMsg*)system);
+
+    } else if(system->type == VERIFY_PASS_ADD) {
+        snprintf(buf1,sizeof(buf1),_("%s accept your request,and add back you as friend too"),system->account);
+        //purple_notify_message(ac->gc,PURPLE_NOTIFY_MSG_INFO,_("System Message"),_("Add Friend"),buf1,NULL,NULL);
+        cb_show_messageBox(MSG_INFO, s_strdup("Add Friend"), s_strdup(buf1));
+
+    } else if(system->type == VERIFY_PASS) {
+        snprintf(buf1,sizeof(buf1),_("%s accept your request"),system->account);
+        cb_show_messageBox(MSG_INFO, s_strdup("Add Friend"), s_strdup(buf1));
+        //purple_notify_message(ac->gc,PURPLE_NOTIFY_MSG_INFO,_("System Message"),_("Add Friend"),buf1,NULL,NULL);
+
+    }
+}
+
 static char* hash_with_local_file(const char* uin,const char* ptwebqq,void* js)
 {
     char path[512];
@@ -1705,7 +1776,7 @@ static void get_friends_info_retry(LwqqClient* lc,LwqqHashFunc hashtry)
 }
 
 //find buddy and group ,add they
-#if 0
+#if 1
 
 static void confirm_table_yes(LwqqConfirmTable* table,PurpleRequestFields* fields)
 {
@@ -1772,10 +1843,8 @@ static void add_friend_receipt(LwqqAsyncEvent* ev)
 {
     int err = ev->result;
     LwqqClient* lc = ev->lc;
-    qq_account* ac = lc->data;
     if(err == 6 ){
-        QString message = i18n( "ErrCode:6\nPlease try agagin later\n");
-        KMessageBox::queuedMessageBox(Kopete::UI::Global::mainWidget(), KMessageBox::Error, message);
+        cb_show_messageBox(MSG_ERROR, s_strdup(""), s_strdup("ErrCode:6\nPlease try agagin later\n"));
         //purple_notify_message(ac->gc,PURPLE_NOTIFY_MSG_INFO,_("Error Message"),_("ErrCode:6\nPlease try agagin later\n"),NULL,NULL,NULL);
     }
 }
@@ -1835,8 +1904,6 @@ static void search_buddy_receipt(LwqqAsyncEvent* ev,LwqqBuddy* buddy,char* uni_i
 {
     int err = ev->result;
     LwqqClient* lc = ev->lc;
-    qq_account* ac = lc->data;
-    QString msg;
     //captcha wrong
     if(err == 10000){
         LwqqAsyncEvent* event = lwqq_info_search_friend(lc,uni_id,buddy);
@@ -1844,14 +1911,12 @@ static void search_buddy_receipt(LwqqAsyncEvent* ev,LwqqBuddy* buddy,char* uni_i
         return;
     }
     if(err == LWQQ_EC_NO_RESULT){
-        msg = i18n( "Account not exists or not main display account");
-        KMessageBox::queuedMessageBox(Kopete::UI::Global::mainWidget(), KMessageBox::Error, msg);
+        cb_show_messageBox(MSG_ERROR, s_strdup(""), s_strdup("Account not exists or not main display account"));
         //purple_notify_message(ac->gc,PURPLE_NOTIFY_MSG_INFO,_("Error Message"),_("Account not exists or not main display account"),NULL,NULL,NULL);
         goto failed;
     }
     if(!buddy->token){
-        msg = i18n( "Get friend infomation failed");
-        KMessageBox::queuedMessageBox(Kopete::UI::Global::mainWidget(), KMessageBox::Error, msg);
+        cb_show_messageBox(MSG_ERROR, s_strdup(""), s_strdup("Get friend infomation failed"));
         //purple_notify_message(ac->gc,PURPLE_NOTIFY_MSG_INFO,_("Error Message"),_("Get friend infomation failed"),NULL,NULL,NULL);
         goto failed;
     }
@@ -1882,19 +1947,9 @@ void qq_add_buddy( LwqqClient* lc, const char *username, const char *message)
     }else
         f_buddy->cate_index = cate->index;
 
-    if(find_group_and_member_by_card(lc, uni_id, &g, &sb)){
-        LwqqAsyncEvset* set = lwqq_async_evset_new();
-        LwqqAsyncEvent* ev;
-        f_buddy->uin = s_strdup(sb->uin);
-        ev = lwqq_info_get_group_member_detail(lc, sb->uin, f_buddy);
-        lwqq_async_evset_add_event(set, ev);
-        ev = lwqq_info_get_friend_qqnumber(lc,f_buddy);
-        lwqq_async_evset_add_event(set,ev);
-        lwqq_async_add_evset_listener(set, _C_(3p,lwqq_info_add_group_member_as_friend,lc,f_buddy,NULL));
-    }else{
         //friend->qqnumber = s_strdup(qqnum);
         LwqqAsyncEvent* ev = lwqq_info_search_friend(lc,uni_id,f_buddy);
-        const char* msg = message;
+        const char* msg = NULL;
         lwqq_async_add_event_listener(ev, _C_(4p,search_buddy_receipt,ev,f_buddy,s_strdup(uni_id),s_strdup(msg)));
     }
 }
@@ -1905,7 +1960,8 @@ static void add_group_receipt(LwqqAsyncEvent* ev,LwqqGroup* g)
     LwqqClient* lc = ev->lc;
     qq_account* ac = lc->data;
     if(err == 6 ){
-        purple_notify_message(ac->gc,PURPLE_NOTIFY_MSG_INFO,_("Error Message"),_("ErrCode:6\nPlease try agagin later\n"),NULL,NULL,NULL);
+        cb_show_messageBox(MSG_ERROR, s_strdup(""), s_strdup("ErrCode:6\nPlease try agagin later\n"));
+        //purple_notify_message(ac->gc,PURPLE_NOTIFY_MSG_INFO,_("Error Message"),_("ErrCode:6\nPlease try agagin later\n"),NULL,NULL,NULL);
     }
     lwqq_group_free(g);
 }
@@ -1930,7 +1986,8 @@ static void search_group_receipt(LwqqAsyncEvent* ev,LwqqGroup* g)
         return;
     }
     if(err == LWQQ_EC_NO_RESULT){
-        purple_notify_message(ac->gc,PURPLE_NOTIFY_MSG_INFO,_("Error Message"),_("Get QQ Group Infomation Failed"),NULL,NULL,NULL);
+        cb_show_messageBox(MSG_ERROR, s_strdup(""), s_strdup("Get QQ Group Infomation Failed"));
+        //purple_notify_message(ac->gc,PURPLE_NOTIFY_MSG_INFO,_("Error Message"),_("Get QQ Group Infomation Failed"),NULL,NULL,NULL);
         lwqq_group_free(g);
         return;
     }

@@ -86,3 +86,5 @@ webqqgroupchatsession.h
 webqqgroupchatsession.cpp
 webqqchatui.rc
 webqqgroupui.rc
+webqqshowgetinfo.h
+webqqshowgetinfo.cpp

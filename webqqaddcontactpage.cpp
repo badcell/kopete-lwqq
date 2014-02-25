@@ -54,7 +54,7 @@ bool WebqqAddContactPage::apply( Kopete::Account* a, Kopete::MetaContact* m )
 	{
 		QString name = m_webqqAddUI.m_uniqueName->text();
         WebqqAccount *acc = dynamic_cast< WebqqAccount *>(a);
-        acc->find_add_contact(name, (m_webqqAddUI.m_rbEcho->isChecked() ? WebqqAccount::Buddy : WebqqAccount::Group));
+        acc->find_add_contact(name, (m_webqqAddUI.m_rbEcho->isChecked() ? WebqqAccount::Buddy : WebqqAccount::Group), m);
 //		if ( a->addContact(name, m, Kopete::Account::ChangeKABC ) )
 //		{
 //			WebqqContact * newContact = qobject_cast<WebqqContact*>( Kopete::ContactList::self()->findContact( a->protocol()->pluginId(), a->accountId(), name ) );
