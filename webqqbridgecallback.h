@@ -20,6 +20,7 @@ typedef enum  {
   GROUP_MEMBERS,/*call ac_group_members(LwqqClient* lc, LwqqGroup *group)*/
   SHOW_CONFIRM,/*call ac_show_confirm_table(LwqqClient* lc,LwqqConfirmTable* table);*/
   SHOW_MESSAGE,
+  FRIEND_COME,
   
 }CallbackFunctionType;
 

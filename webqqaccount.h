@@ -131,8 +131,9 @@ public slots:
 	void ac_qq_msg_check(LwqqClient *lc);
     void ac_show_confirm_table(LwqqClient* lc, LwqqConfirmTable* table, add_info *info);
     void ac_show_messageBox(msg_type type, const char *title, const char *message );
+    void ac_friend_come(LwqqClient* lc,LwqqBuddy* b);
 	void slotReceivedInstanceSignal(CallbackObject cb);
-	
+    void blist_change(LwqqClient* lc,LwqqMsgBlistChange* blist);
 	void pollMessage();
 	void afterLogin();
 	
@@ -223,7 +224,7 @@ static void cb_lost_connection(LwqqClient* lc);
 static void cb_upload_content_fail(LwqqClient* lc, const char **serv_id, LwqqMsgContent **c, int err);
 static void cb_delete_group_local(LwqqClient* lc, const LwqqGroup **g);
 static void cb_flush_group_members(LwqqClient* lc, LwqqGroup **g);
-
+static void cb_return_friend_come(LwqqClient* lc,LwqqBuddy* b);
 static void confirm_table_yes(LwqqConfirmTable* table, const char *input, LwqqAnswer answer);
 static void confirm_table_no(LwqqConfirmTable* table,const char *input);
 static void system_message(LwqqClient* lc,LwqqMsgSystem* system,LwqqBuddy* buddy);
@@ -233,7 +234,7 @@ static void friends_valid_hash(LwqqAsyncEvent* ev,LwqqHashFunc last_hash);
 void qq_add_buddy( LwqqClient* lc, const char *username, const char *message);
 static void add_friend(LwqqClient* lc,LwqqConfirmTable* c,LwqqBuddy* b,char* message);
 static void get_friends_info_retry(LwqqClient* lc,LwqqHashFunc hashtry);
-
+static void write_buddy_to_db(LwqqClient* lc,LwqqBuddy* b);
 
 Kopete::OnlineStatus statusFromLwqqStatus(LwqqStatus status);
 
