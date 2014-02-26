@@ -82,11 +82,16 @@ public:
       *
       */
     enum Find_Type{Buddy, Group};
-    void find_add_contact(const QString name, Find_Type type ,Kopete::MetaContact* m );
+    void find_add_contact(const QString name, Find_Type type ,QString groupName);
 	/*
 	* instance of LwqqClient
 	*/
 	LwqqClient *m_lc;
+
+    QString m_groupName;
+    QString m_contactName;
+    QString m_contactQQ;
+    QString m_contactNick;
 	/*
 	 * got a message, then send it to contact
 	 */
@@ -124,8 +129,8 @@ public slots:
     void ac_group_avatar(LwqqClient *lc, LwqqGroup *group);
     void ac_group_members(LwqqClient *lc, LwqqGroup *group);
 	void ac_qq_msg_check(LwqqClient *lc);
-    void ac_show_confirm_table(LwqqClient* lc,LwqqConfirmTable* table);
-    void ac_show_messageBox(msg_type type, const char *title, const char *message);
+    void ac_show_confirm_table(LwqqClient* lc, LwqqConfirmTable* table, add_info *info);
+    void ac_show_messageBox(msg_type type, const char *title, const char *message );
 	void slotReceivedInstanceSignal(CallbackObject cb);
 	
 	void pollMessage();
@@ -196,6 +201,7 @@ private:
     
     QTimer *pollTimer;
     QByteArray avatarData;
+    add_info *m_addInfo;
     /*called by login stage1*/
     //void login_stage_2(LwqqAsyncEvent* ev,LwqqClient* lc);
 };
@@ -209,7 +215,7 @@ static void cb_friend_avatar(LwqqClient *lc, LwqqBuddy *buddy);
 static void cb_group_avatar(LwqqClient *lc, LwqqGroup *group);
 static void cb_group_members(LwqqClient *lc, LwqqGroup *group);
 static void cb_qq_msg_check(LwqqClient* lc);
-static void cb_show_confirm_table(LwqqClient* lc,LwqqConfirmTable* table);
+static void cb_show_confirm_table(LwqqClient* lc, LwqqConfirmTable* table, add_info *info);
 static void cb_show_messageBox(msg_type type, const char *title, const char *message);
 static void cb_friend_come(LwqqClient* lc, LwqqBuddy **buddy);
 static void cb_group_come(LwqqClient* lc, LwqqGroup **group);
@@ -218,12 +224,14 @@ static void cb_upload_content_fail(LwqqClient* lc, const char **serv_id, LwqqMsg
 static void cb_delete_group_local(LwqqClient* lc, const LwqqGroup **g);
 static void cb_flush_group_members(LwqqClient* lc, LwqqGroup **g);
 
-
+static void confirm_table_yes(LwqqConfirmTable* table, const char *input, LwqqAnswer answer);
+static void confirm_table_no(LwqqConfirmTable* table,const char *input);
 static void system_message(LwqqClient* lc,LwqqMsgSystem* system,LwqqBuddy* buddy);
 static char* hash_with_local_file(const char* uin,const char* ptwebqq,void* js);
 static char* hash_with_remote_file(const char* uin,const char* ptwebqq,void* js);
 static void friends_valid_hash(LwqqAsyncEvent* ev,LwqqHashFunc last_hash);
-
+void qq_add_buddy( LwqqClient* lc, const char *username, const char *message);
+static void add_friend(LwqqClient* lc,LwqqConfirmTable* c,LwqqBuddy* b,char* message);
 static void get_friends_info_retry(LwqqClient* lc,LwqqHashFunc hashtry);
 
 

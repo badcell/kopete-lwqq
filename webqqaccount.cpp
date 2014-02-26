@@ -366,7 +366,8 @@ void WebqqAccount::slotReceivedInstanceSignal(CallbackObject cb)
   {
       LwqqClient *lc = (LwqqClient*)(cb.ptr1);
       LwqqConfirmTable *table = (LwqqConfirmTable*)(cb.ptr2);
-      this->ac_show_confirm_table(lc, table);
+      add_info *info = (add_info*)(cb.ptr3);
+      this->ac_show_confirm_table(lc, table, info);
   }else if(cb.fun_t == SHOW_MESSAGE)
   {
       msg_type type = cb.type;
@@ -537,7 +538,7 @@ void WebqqAccount::ac_qq_msg_check(LwqqClient *lc)
             case LWQQ_MT_SYSTEM:
 #if 1
                 sys_msg = (LwqqMsgSystem*)msg->msg;
-                if(sys_msg->type == VERIFY_REQUIRED){
+                if(sys_msg->type == LwqqMsgSystem::VERIFY_REQUIRED){
                     msg->msg = NULL;
                     LwqqBuddy* buddy = lwqq_buddy_new();
                     LwqqAsyncEvent* ev = lwqq_info_get_stranger_info(
@@ -1535,11 +1536,14 @@ void WebqqAccount::updateContactStatus()
 	}
 }
 
-void WebqqAccount::find_add_contact(const QString name, Find_Type type, Kopete::MetaContact *m)
+void WebqqAccount::find_add_contact(const QString name, Find_Type type, QString groupName)
 {
+    m_groupName = groupName;
+    m_contactName = name;
     if(type == Buddy)
     {
-
+        qDebug()<<"add buddy";
+        qq_add_buddy(m_lc, name.toUtf8().constData(), NULL);
     }else if(type == Group)
     {
 
@@ -1558,19 +1562,91 @@ void WebqqAccount::cleanAll_contacts()
 
 }
 
-void WebqqAccount::ac_show_confirm_table(LwqqClient *lc, LwqqConfirmTable *table)
+void WebqqAccount::ac_show_confirm_table(LwqqClient *lc, LwqqConfirmTable *table, add_info *info)
 {
+    qDebug()<<"ac_show_confirm_table";
+    m_addInfo = info;
     if(table->body){
         ShowGetInfoDialog *dlg = new ShowGetInfoDialog();
-        dlg->setAddInfo(QString(table->body));
+        dlg->setAddInfo(QString::fromUtf8(table->body));
         dlg->exec();
+        if(dlg->okOrCancle() == "OK")
+            confirm_table_yes(table, NULL, 0);
+        else
+            confirm_table_no(table, NULL);
+        delete dlg;
 
+    }
+    if(table->input_label){
+        ShowGetInfoDialog *dlg = new ShowGetInfoDialog();
+        dlg->setVerifify();
+        dlg->exec();
+        QString input = dlg->getVerificationString();
+        if(dlg->okOrCancle() == "OK")
+            confirm_table_yes(table, input.toUtf8().constData(), 0);
+        else
+            confirm_table_no(table, input.toUtf8().constData());
+        delete dlg;
+    }
+    if(table->exans_label||table->flags&LWQQ_CT_ENABLE_IGNORE||table->flags&LWQQ_CT_CHOICE_MODE){
+        ShowGetInfoDialog *dlg = new ShowGetInfoDialog();
+        dlg->setRequired(QString::fromUtf8(table->body));
+        dlg->exec();
+        QString input = dlg->getVerificationString();
+        if(dlg->okOrCancle() == "OK")
+            confirm_table_yes(table, input.toUtf8().constData(), dlg->webqqAnswer());
+        else
+            confirm_table_no(table, input.toUtf8().constData());
+        delete dlg;
     }
 }
 
 void WebqqAccount::ac_show_messageBox(msg_type type, const char *title, const char *message)
 {
+    if(type == MSG_INFO)
+    {
+        KMessageBox::information(Kopete::UI::Global::mainWidget(), i18n(message), i18n(title));
+    }else if(type == MSG_ERROR)
+    {
+        KMessageBox::error(Kopete::UI::Global::mainWidget(), i18n(message), i18n(title));
+    }else if(type == MSG_ADD)
+    {
+        KMessageBox::information(Kopete::UI::Global::mainWidget(), i18n(message), i18n(title));
+        qDebug()<<"add buddy!!!!";
+        QList<Kopete::Group*> groupList = Kopete::ContactList::self()->groups();
+        Kopete::Group *g;
+        Kopete::Group *targetGroup = NULL;
 
+        foreach(g, groupList)
+        {
+            if(g->displayName() == m_groupName)
+            {
+                targetGroup = g;
+                break;
+            }
+        }
+        qDebug()<<"start add";
+        LwqqBuddy* buddy = lwqq_buddy_new();
+        buddy->qqnumber = m_addInfo->qq;
+        buddy->nick = m_addInfo->name;
+        buddy->uin = m_addInfo->uin;
+        qDebug()<<"qq:"<<QString::fromUtf8(m_addInfo->qq)<<"name:"<<QString::fromUtf8(m_addInfo->name)<<"uin"<<QString::fromUtf8(m_addInfo->uin);
+        LwqqAsyncEvset* set = lwqq_async_evset_new();
+        LwqqAsyncEvent* ev;
+        ev = lwqq_info_get_friend_avatar(m_lc,buddy);
+        lwqq_async_evset_add_event(set,ev);
+        ev = lwqq_info_get_friend_detail_info(m_lc, buddy);/*get detail of friend*/
+        lwqq_async_evset_add_event(set,ev);
+        lwqq_async_add_evset_listener(set,_C_(2p,cb_friend_avatar, m_lc, buddy));
+        qDebug()<<"lwqq_async_add_evset_listener";
+        addContact(QString::fromUtf8(m_addInfo->qq), QString::fromUtf8(m_addInfo->name), targetGroup, Kopete::Account::ChangeKABC);
+        qDebug()<<"addContact";
+        WebqqContact * addedContact = dynamic_cast<WebqqContact *>(contacts().value( QString(buddy->qqnumber) ));
+        addedContact->setContactType(WebqqContact::Contact_Chat);
+        LIST_INSERT_HEAD(&m_lc->friends,buddy,entries);
+        lwdb_userdb_insert_buddy_info(((qq_account*)(m_lc->data))->db, buddy);
+        qDebug()<<"edn";
+    }
 }
 
 static void cb_need_verify2(LwqqClient* lc,LwqqVerifyCode** code)
@@ -1655,12 +1731,13 @@ void cb_qq_msg_check(LwqqClient* lc)
     ObjectInstance::instance()->callSignal(cb);
 }
 
-void cb_show_confirm_table(LwqqClient *lc, LwqqConfirmTable *table)
+void cb_show_confirm_table(LwqqClient *lc, LwqqConfirmTable *table, add_info *info)
 {
     CallbackObject cb;
     cb.fun_t = SHOW_CONFIRM;
     cb.ptr1 = (void *)lc;
     cb.ptr2 = (void*)table;
+    cb.ptr3 = (void*)info;
     ObjectInstance::instance()->callSignal(cb);
 }
 
@@ -1686,38 +1763,7 @@ static void verify_required_confirm(LwqqClient* lc,char* account,LwqqConfirmTabl
     s_free(account);
 }
 
-static void system_message(LwqqClient* lc,LwqqMsgSystem* system,LwqqBuddy* buddy)
-{
-    qq_account* ac = lwqq_client_userdata(lc);
-    char buf1[256]={0};
-    if(system->type == VERIFY_REQUIRED) {
-        char buf2[2048];
-        LwqqConfirmTable* ct = s_malloc0(sizeof(*ct));
-        ct->title = s_strdup(_("Friend Confirm"));
-        snprintf(buf2,sizeof(buf2),
-                _("%s\nRequest as your friend\nAdditional Reason:%s\n\n"),system->account,system->verify_required.msg);
-        format_body_from_buddy(buf2,sizeof(buf2),buddy);
-        ct->body = s_strdup(buf2);
-        ct->exans_label = s_strdup(_("Agree and add back"));
-        ct->input_label = s_strdup(_("Refuse reason"));
-        ct->flags = LWQQ_CT_ENABLE_IGNORE;
-        ct->cmd = _C_(3p,verify_required_confirm,lc,s_strdup(system->account),ct);
-        cb_show_confirm_table(lc, ct);
-        lwqq_buddy_free(buddy);
-        lwqq_msg_free((LwqqMsg*)system);
 
-    } else if(system->type == VERIFY_PASS_ADD) {
-        snprintf(buf1,sizeof(buf1),_("%s accept your request,and add back you as friend too"),system->account);
-        //purple_notify_message(ac->gc,PURPLE_NOTIFY_MSG_INFO,_("System Message"),_("Add Friend"),buf1,NULL,NULL);
-        cb_show_messageBox(MSG_INFO, s_strdup("Add Friend"), s_strdup(buf1));
-
-    } else if(system->type == VERIFY_PASS) {
-        snprintf(buf1,sizeof(buf1),_("%s accept your request"),system->account);
-        cb_show_messageBox(MSG_INFO, s_strdup("Add Friend"), s_strdup(buf1));
-        //purple_notify_message(ac->gc,PURPLE_NOTIFY_MSG_INFO,_("System Message"),_("Add Friend"),buf1,NULL,NULL);
-
-    }
-}
 
 static char* hash_with_local_file(const char* uin,const char* ptwebqq,void* js)
 {
@@ -1778,80 +1824,42 @@ static void get_friends_info_retry(LwqqClient* lc,LwqqHashFunc hashtry)
 //find buddy and group ,add they
 #if 1
 
-static void confirm_table_yes(LwqqConfirmTable* table,PurpleRequestFields* fields)
+static void confirm_table_yes(LwqqConfirmTable* table,const char *input, LwqqAnswer answer)
 {
     if(table->exans_label){
-        table->answer = purple_request_fields_get_choice(fields,"choice");
+       table->answer = answer;
     }else
         table->answer = LWQQ_YES;
     if(table->input_label){
-        const char* i = purple_request_fields_get_string(fields, "input");
-        table->input = s_strdup(i);
+        table->input = s_strdup(input);
     }
     vp_do(table->cmd,NULL);
 }
-static void confirm_table_no(LwqqConfirmTable* table,PurpleRequestFields* fields)
+static void confirm_table_no(LwqqConfirmTable* table,const char *input)
 {
     table->answer = (table->flags&LWQQ_CT_ENABLE_IGNORE)?LWQQ_IGNORE:LWQQ_NO;
     if(table->input_label){
-        const char* i = purple_request_fields_get_string(fields, "input");
-        table->input = s_strdup(i);
+        table->input = s_strdup(input);
     }
     vp_do(table->cmd,NULL);
 }
 
-// show firend info
-static void show_confirm_table(LwqqClient* lc,LwqqConfirmTable* table)
-{
-    qq_account* ac = lwqq_client_userdata(lc);
-    PurpleRequestFields *fields;
-    PurpleRequestFieldGroup *field_group;
-
-    fields = purple_request_fields_new();
-    field_group = purple_request_field_group_new((gchar*)0);
-    purple_request_fields_add_group(fields, field_group);
-
-    if(table->body){
-        PurpleRequestField* str = purple_request_field_string_new("body", table->title, table->body, TRUE);
-        purple_request_field_string_set_editable(str, FALSE);
-        purple_request_field_group_add_field(field_group, str);
-    }
-
-    if(table->exans_label||table->flags&LWQQ_CT_ENABLE_IGNORE||table->flags&LWQQ_CT_CHOICE_MODE){
-        PurpleRequestField* choice = purple_request_field_choice_new("choice", _("Please Select"), table->answer);
-        purple_request_field_choice_add(choice,table->no_label?:_("Deny"));
-        purple_request_field_choice_add(choice,table->yes_label?:_("Accept"));
-        if(table->exans_label)
-            purple_request_field_choice_add(choice,table->exans_label);
-        purple_request_field_group_add_field(field_group,choice);
-    }
-
-    if(table->input_label){
-        PurpleRequestField* i = purple_request_field_string_new("input", table->input_label, table->input?:"", FALSE);
-        s_free(table->input);
-        purple_request_field_group_add_field(field_group,i);
-    }
-
-    purple_request_fields(ac->gc, NULL,
-                          _("Confirm"), NULL,
-                          fields, _("Confirm"), G_CALLBACK(confirm_table_yes),
-                          table->flags&LWQQ_CT_ENABLE_IGNORE?_("Ignore"):_("Deny"), G_CALLBACK(confirm_table_no),
-                          ac->account, NULL, NULL, table);
-}
 
 static void add_friend_receipt(LwqqAsyncEvent* ev)
 {
     int err = ev->result;
     LwqqClient* lc = ev->lc;
     if(err == 6 ){
-        cb_show_messageBox(MSG_ERROR, s_strdup(""), s_strdup("ErrCode:6\nPlease try agagin later\n"));
+        cb_show_messageBox(MSG_ERROR, s_strdup("Error Message"), s_strdup("ErrCode:6\nPlease try agagin later\n"));
         //purple_notify_message(ac->gc,PURPLE_NOTIFY_MSG_INFO,_("Error Message"),_("ErrCode:6\nPlease try agagin later\n"),NULL,NULL,NULL);
     }
 }
+
 static void add_friend_ask_message(LwqqClient* lc,LwqqConfirmTable* ask,LwqqBuddy* b)
 {
     add_friend(lc,ask,b,s_strdup(ask->input));
 }
+
 static void add_friend(LwqqClient* lc,LwqqConfirmTable* c,LwqqBuddy* b,char* message)
 {
     if(c->answer == LWQQ_NO){
@@ -1861,7 +1869,11 @@ static void add_friend(LwqqClient* lc,LwqqConfirmTable* c,LwqqBuddy* b,char* mes
         LwqqConfirmTable* ask = s_malloc0(sizeof(*ask));
         ask->input_label = s_strdup(_("Invite Message"));
         ask->cmd = _C_(3p,add_friend_ask_message,lc,ask,b);
-        cb_show_confirm_table(lc, ask);
+        add_info *info = s_malloc0(sizeof(*info));
+        info->qq = s_strdup(b->qqnumber);
+        info->name = s_strdup(b->nick);
+        info->uin = s_strdup(b->uin);
+        cb_show_confirm_table(lc, ask, info);
         lwqq_ct_free(c);
         return ;
     }else{
@@ -1873,6 +1885,7 @@ done:
     lwqq_buddy_free(b);
     s_free(message);
 }
+
 
 static void format_body_from_buddy(char* body,size_t buf_len,LwqqBuddy* buddy)
 {
@@ -1895,15 +1908,52 @@ static void format_body_from_buddy(char* body,size_t buf_len,LwqqBuddy* buddy)
     ADD_INFO(_("Occupation"), buddy->occupation);
     ADD_INFO(_("College"), buddy->college);
     ADD_INFO(_("Homepage"), buddy->homepage);
-    //ADD_INFO("说明", buddy->);
 #undef ADD_INFO
     strncat(body,body_,buf_len-strlen(body));
+}
+
+static void system_message(LwqqClient* lc,LwqqMsgSystem* system,LwqqBuddy* buddy)
+{
+    qq_account* ac = lwqq_client_userdata(lc);
+    char buf1[256]={0};
+    if(system->type == LwqqMsgSystem::VERIFY_REQUIRED) {
+        char buf2[2048];
+        LwqqConfirmTable* ct = s_malloc0(sizeof(*ct));
+        ct->title = s_strdup(_("Friend Confirm"));
+        snprintf(buf2,sizeof(buf2),
+                _("%s\nRequest as your friend\nAdditional Reason:%s\n\n"),system->account,system->verify_required.msg);
+        format_body_from_buddy(buf2,sizeof(buf2),buddy);
+        ct->body = s_strdup(buf2);
+        ct->exans_label = s_strdup(_("Agree and add back"));
+        ct->input_label = s_strdup(_("Refuse reason"));
+        ct->flags = LWQQ_CT_ENABLE_IGNORE;
+        ct->cmd = _C_(3p,verify_required_confirm,lc,s_strdup(system->account),ct);
+        add_info *info = s_malloc0(sizeof(*info));
+        info->qq = s_strdup(buddy->qqnumber);
+        info->name = s_strdup(buddy->nick);
+        info->uin = s_strdup(buddy->uin);
+        cb_show_confirm_table(lc, ct, info);
+        lwqq_buddy_free(buddy);
+        lwqq_msg_free((LwqqMsg*)system);
+
+    } else if(system->type == LwqqMsgSystem::VERIFY_PASS_ADD) {
+        snprintf(buf1,sizeof(buf1),_("%s accept your request,and add back you as friend too"),system->account);
+        //purple_notify_message(ac->gc,PURPLE_NOTIFY_MSG_INFO,_("System Message"),_("Add Friend"),buf1,NULL,NULL);
+        cb_show_messageBox(MSG_ADD, s_strdup("Add Friend"), s_strdup(buf1));
+    } else if(system->type == LwqqMsgSystem::VERIFY_PASS) {
+        snprintf(buf1,sizeof(buf1),_("%s accept your request"),system->account);
+        cb_show_messageBox(MSG_INFO, s_strdup("Add Friend"), s_strdup(buf1));
+        //purple_notify_message(ac->gc,PURPLE_NOTIFY_MSG_INFO,_("System Message"),_("Add Friend"),buf1,NULL,NULL);
+    }
 }
 
 static void search_buddy_receipt(LwqqAsyncEvent* ev,LwqqBuddy* buddy,char* uni_id,char* message)
 {
     int err = ev->result;
     LwqqClient* lc = ev->lc;
+    LwqqConfirmTable* confirm = s_malloc0(sizeof(*confirm));
+    add_info *info = s_malloc0(sizeof(*info));
+    char body[1024] = {0};
     //captcha wrong
     if(err == 10000){
         LwqqAsyncEvent* event = lwqq_info_search_friend(lc,uni_id,buddy);
@@ -1911,22 +1961,25 @@ static void search_buddy_receipt(LwqqAsyncEvent* ev,LwqqBuddy* buddy,char* uni_i
         return;
     }
     if(err == LWQQ_EC_NO_RESULT){
-        cb_show_messageBox(MSG_ERROR, s_strdup(""), s_strdup("Account not exists or not main display account"));
+        cb_show_messageBox(MSG_ERROR, s_strdup("Error Message"), s_strdup("Account not exists or not main display account"));
         //purple_notify_message(ac->gc,PURPLE_NOTIFY_MSG_INFO,_("Error Message"),_("Account not exists or not main display account"),NULL,NULL,NULL);
         goto failed;
     }
     if(!buddy->token){
-        cb_show_messageBox(MSG_ERROR, s_strdup(""), s_strdup("Get friend infomation failed"));
+        cb_show_messageBox(MSG_ERROR, s_strdup("Error Message"), s_strdup("Get friend infomation failed"));
         //purple_notify_message(ac->gc,PURPLE_NOTIFY_MSG_INFO,_("Error Message"),_("Get friend infomation failed"),NULL,NULL,NULL);
         goto failed;
     }
-    LwqqConfirmTable* confirm = s_malloc0(sizeof(*confirm));
+
     confirm->title = s_strdup(_("Friend Confirm"));
-    char body[1024] = {0};
+
     format_body_from_buddy(body,sizeof(body),buddy);
     confirm->body = s_strdup(body);
     confirm->cmd = _C_(4p,add_friend,lc,confirm,buddy,message);
-    cb_show_confirm_table(lc,confirm);
+    info->qq = s_strdup(buddy->qqnumber);
+    info->name = s_strdup(buddy->nick);
+    info->uin = s_strdup(buddy->uin);
+    cb_show_confirm_table(lc,confirm, info);
     s_free(uni_id);
     return;
 failed:
@@ -1939,19 +1992,17 @@ void qq_add_buddy( LwqqClient* lc, const char *username, const char *message)
 {
     const char* uni_id = username;
     LwqqGroup* g = NULL;
-    LwqqSimpleBuddy* sb = NULL;
     LwqqBuddy* f_buddy = lwqq_buddy_new();
     LwqqFriendCategory* cate = NULL;
     if(cate == NULL){
         f_buddy->cate_index = 0;
     }else
         f_buddy->cate_index = cate->index;
-
         //friend->qqnumber = s_strdup(qqnum);
         LwqqAsyncEvent* ev = lwqq_info_search_friend(lc,uni_id,f_buddy);
         const char* msg = NULL;
         lwqq_async_add_event_listener(ev, _C_(4p,search_buddy_receipt,ev,f_buddy,s_strdup(uni_id),s_strdup(msg)));
-    }
+
 }
 
 static void add_group_receipt(LwqqAsyncEvent* ev,LwqqGroup* g)
@@ -1960,17 +2011,18 @@ static void add_group_receipt(LwqqAsyncEvent* ev,LwqqGroup* g)
     LwqqClient* lc = ev->lc;
     qq_account* ac = lc->data;
     if(err == 6 ){
-        cb_show_messageBox(MSG_ERROR, s_strdup(""), s_strdup("ErrCode:6\nPlease try agagin later\n"));
+        cb_show_messageBox(MSG_ERROR, s_strdup("Error Message"), s_strdup("ErrCode:6\nPlease try agagin later\n"));
         //purple_notify_message(ac->gc,PURPLE_NOTIFY_MSG_INFO,_("Error Message"),_("ErrCode:6\nPlease try agagin later\n"),NULL,NULL,NULL);
     }
     lwqq_group_free(g);
 }
 static void add_group(LwqqClient* lc,LwqqConfirmTable* c,LwqqGroup* g)
 {
+    LwqqAsyncEvent* ev = lwqq_info_add_group(lc, g, c->input);
     if(c->answer == LWQQ_NO){
         goto done;
     }
-    LwqqAsyncEvent* ev = lwqq_info_add_group(lc, g, c->input);
+
     lwqq_async_add_event_listener(ev, _C_(2p,add_group_receipt,ev,g));
 done:
     lwqq_ct_free(c);
@@ -1986,7 +2038,7 @@ static void search_group_receipt(LwqqAsyncEvent* ev,LwqqGroup* g)
         return;
     }
     if(err == LWQQ_EC_NO_RESULT){
-        cb_show_messageBox(MSG_ERROR, s_strdup(""), s_strdup("Get QQ Group Infomation Failed"));
+        cb_show_messageBox(MSG_ERROR, s_strdup("Error Message"), s_strdup("Get QQ Group Infomation Failed"));
         //purple_notify_message(ac->gc,PURPLE_NOTIFY_MSG_INFO,_("Error Message"),_("Get QQ Group Infomation Failed"),NULL,NULL,NULL);
         lwqq_group_free(g);
         return;
@@ -2001,12 +2053,16 @@ static void search_group_receipt(LwqqAsyncEvent* ev,LwqqGroup* g)
 #undef ADD_INFO
     confirm->body = s_strdup(body);
     confirm->cmd = _C_(3p,add_group,lc,confirm,g);
-    cb_show_confirm_table(lc,confirm);
+    add_info *info = s_malloc0(sizeof(*info));
+    info->qq = s_strdup(g->qq);
+    info->name = s_strdup(g->name);
+    info->uin = s_strdup(g->gid);
+    cb_show_confirm_table(lc,confirm, info);
 }
 
 static void search_group(LwqqClient* lc,const char* text)
 {
-    LwqqGroup* g = lwqq_group_new(LWQQ_GROUP_QUN);
+    LwqqGroup* g = lwqq_group_new(LwqqGroup::LWQQ_GROUP_QUN);
     LwqqAsyncEvent* ev;
     ev = lwqq_info_search_group_by_qq(lc, text, g);
     lwqq_async_add_event_listener(ev, _C_(2p,search_group_receipt,ev,g));

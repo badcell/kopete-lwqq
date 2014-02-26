@@ -27,6 +27,7 @@
 #include "kopetecontactlist.h"
 #include "kopetemetacontact.h"
 #include "kopetecontact.h"
+#include "kopetegroup.h"
 #include <kmessagebox.h>
 #include <kopeteuiglobal.h>
 #include "qq_types.h"
@@ -52,9 +53,19 @@ bool WebqqAddContactPage::apply( Kopete::Account* a, Kopete::MetaContact* m )
 {
 	if ( validateData() )
 	{
+        qDebug()<<"WebqqAddContactPage::apply";
 		QString name = m_webqqAddUI.m_uniqueName->text();
         WebqqAccount *acc = dynamic_cast< WebqqAccount *>(a);
-        acc->find_add_contact(name, (m_webqqAddUI.m_rbEcho->isChecked() ? WebqqAccount::Buddy : WebqqAccount::Group), m);
+        QStringList groupNames;
+        Kopete::GroupList groupList = m->groups();
+        foreach(Kopete::Group *group, groupList)
+        {
+            if (group->type() == Kopete::Group::Normal)
+                groupNames += group->displayName();
+            else if (group->type() == Kopete::Group::TopLevel)
+                groupNames += QString();
+        }
+        acc->find_add_contact(name, (m_webqqAddUI.m_rbEcho->isChecked() ? WebqqAccount::Buddy : WebqqAccount::Group), groupNames.at(0));
 //		if ( a->addContact(name, m, Kopete::Account::ChangeKABC ) )
 //		{
 //			WebqqContact * newContact = qobject_cast<WebqqContact*>( Kopete::ContactList::self()->findContact( a->protocol()->pluginId(), a->accountId(), name ) );

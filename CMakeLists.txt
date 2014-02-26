@@ -94,6 +94,7 @@ set(kopete_webqq_PART_SRCS
    webqqchatsession.cpp
    webqqdiscuchatsession.cpp
    webqqgroupchatsession.cpp
+   webqqshowgetinfo.cpp
    js.cpp
    translate.cpp
    trex.cpp

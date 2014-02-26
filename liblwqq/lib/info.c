@@ -316,6 +316,53 @@ static void parse_friend_detail(json_t* json,LwqqBuddy* buddy)
 #undef SET_BUDDY_INFO
 }
 
+static void parse_add_friend_detail(json_t* json,LwqqBuddy* buddy)
+{
+
+    //{"face":567,"birthday":{"month":6,"year":1991,"day":14},"occupation":"","phone":"","allow":1,"college":"","tuin":289056851,"constel":5,"blood":0,"homepage":"","stat":10,"vip_info":0,"country":"中国","city":"威海","personal":"","nick":"d3dd","shengxiao":8,"email":"","client_type":41,"province":"山东","gender":"male","mobile":""}}
+    //
+    //
+#define  SET_BUDDY_INFO(key, name) lwqq_override(buddy->key, lwqq__json_get_value(json, name))
+        SET_BUDDY_INFO(uin, "tuin");
+        SET_BUDDY_INFO(face, "face");
+        json_t* birth_tmp = json_find_first_label(json, "birthday");
+        if(birth_tmp && birth_tmp->child ){
+            birth_tmp = birth_tmp->child;
+            struct tm tm_ = {0};
+            tm_.tm_year = s_atoi(json_parse_simple_value(birth_tmp, "year"),1991)-1900;
+            tm_.tm_mon = s_atoi(json_parse_simple_value(birth_tmp, "month"), 1) -1;
+            tm_.tm_mday = s_atoi(json_parse_simple_value(birth_tmp, "day"), 1);
+            time_t t = mktime(&tm_);
+            buddy->birthday = t;
+        }
+        SET_BUDDY_INFO(occupation, "occupation");
+        SET_BUDDY_INFO(phone, "phone");
+        SET_BUDDY_INFO(allow, "allow");
+        SET_BUDDY_INFO(college, "college");
+        SET_BUDDY_INFO(reg_time, "reg_time");
+        buddy->stat = s_atoi(json_parse_simple_value(json,"constel"),LWQQ_UNKNOW);
+        buddy->blood = s_atoi(json_parse_simple_value(json,"blood"),LWQQ_UNKNOW);
+        SET_BUDDY_INFO(homepage, "homepage");
+        buddy->stat = s_atoi(json_parse_simple_value(json,"stat"),LWQQ_STATUS_LOGOUT);
+        SET_BUDDY_INFO(vip_info, "vip_info");
+        SET_BUDDY_INFO(country, "country");
+        SET_BUDDY_INFO(city, "city");
+        SET_BUDDY_INFO(personal, "personal");
+        //SET_BUDDY_INFO(nick, "nick");
+        lwqq_override(buddy->nick,ibmpc_ascii_character_convert(lwqq__json_get_string(json,"nick")));
+        buddy->shengxiao = s_atoi(json_parse_simple_value(json,"shengxiao"),LWQQ_UNKNOW);
+        SET_BUDDY_INFO(email, "email");
+        buddy->client_type = s_atoi(json_parse_simple_value(json,"client_type"),LWQQ_CLIENT_PC);
+        SET_BUDDY_INFO(province, "province");
+        //SET_BUDDY_INFO(gender, "gender");
+        const char* gender = json_parse_simple_value(json,"gender");
+        buddy->gender = (gender==NULL)?LWQQ_UNKNOW:strcmp(gender,"male")==0?LWQQ_MALE:strcmp(gender,"female")?LWQQ_FEMALE:LWQQ_UNKNOW;
+        SET_BUDDY_INFO(mobile, "mobile");
+        SET_BUDDY_INFO(token, "token");
+        SET_BUDDY_INFO(qqnumber, "account");
+#undef SET_BUDDY_INFO
+}
+
 static void parse_and_do_set_status(json_t* cur,LwqqClient* lc)
 {
     //{"uin":1100872453,"status":"online","client_type":21}
@@ -396,6 +443,26 @@ static int process_friend_detail(LwqqHttpRequest* req,LwqqBuddy* out)
 
 done:
 	lwqq__log_if_error(err, req);
+    lwqq__clean_json_and_req(root,req);
+    return err;
+}
+
+static int process_add_friend_detail(LwqqHttpRequest* req,LwqqBuddy* out)
+{
+    //{"retcode":0,"result":{"face":567,"birthday":{"month":x,"year":xxxx,"day":xxxx},"occupation":"","phone":"","allow":1,"college":"","constel":5,"blood":0,"stat":20,"homepage":"","country":"中国","city":"xx","uiuin":"","personal":"","nick":"xxx","shengxiao":x,"email":"","token":"523678fd7cff12223ef9906a4e924a4bf733108b9532c27c","province":"xx","account":xxx,"gender":"male","tuin":3202680423,"mobile":""}}
+    int err = 0;
+    json_t *root = NULL,*result;
+    lwqq__jump_if_http_fail(req,err);
+    lwqq__jump_if_json_fail(root,req->response,err);
+    result = lwqq__parse_retcode_result(root, &err);
+    //WEBQQ_FATAL:验证码输入错误.
+    if(err != LWQQ_EC_OK) goto done;
+    if(result)
+        parse_add_friend_detail(result,out);
+    else err = LWQQ_EC_NO_RESULT;
+
+done:
+    lwqq__log_if_error(err, req);
     lwqq__clean_json_and_req(root,req);
     return err;
 }
@@ -1810,7 +1877,7 @@ static void add_friend_stage_2(LwqqAsyncEvent* called,LwqqVerifyCode* code,char*
     req->set_header(req,"Referer",WEBQQ_S_REF_URL);
     req->set_header(req,"Connection","keep-alive");
 
-    LwqqAsyncEvent* ev = req->do_request_async(req,lwqq__hasnot_post(),_C_(2p_i,process_friend_detail,req,out));
+    LwqqAsyncEvent* ev = req->do_request_async(req,lwqq__hasnot_post(),_C_(2p_i,process_add_friend_detail,req,out));
     lwqq_async_add_event_chain(ev, called);
 done:
     s_free(uin);

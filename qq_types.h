@@ -74,6 +74,13 @@ typedef enum {
         NOT_DOWNLOAD_GROUP_PIC = 1<<7
 }lwflags;
 
+//add friend and group info
+typedef struct add_info {
+    char* qq;
+    char* name;
+    char* uin;
+}add_info;
+
 typedef struct qq_account {
     LwqqClient* qq;
  //   PurpleAccount* account;

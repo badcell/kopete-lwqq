@@ -1,12 +1,15 @@
 #ifndef WEBQQSHOWGETINFO_H
 #define WEBQQSHOWGETINFO_H
 #include <QDialog>
-
+#include "type.h"
 class QLabel;
 class QLineEdit;
 class QPushButton;
 class QString;
 class QTextEdit;
+class QRadioButton;
+class QGroupBox;
+class QVBoxLayout;
 
 class ShowGetInfoDialog : public QDialog
 {
@@ -19,10 +22,11 @@ public:
     void setVerifify();
     void setAddInfo(QString info);
     void setUserInfo(QString info);
+    void setRequired(QString info);
     QString okOrCancle(){
         return m_okOrCancle;
     }
-
+    LwqqAnswer webqqAnswer();
 private:
     QLineEdit*      m_inputverififyEdit;
     QPushButton*    m_okButton;
@@ -30,7 +34,9 @@ private:
     QTextEdit* m_infoEdit;
     QLabel* m_showLabel;
     QString m_okOrCancle;
-
+    QRadioButton *m_refuseButton;
+    QRadioButton *m_agreeButton;
+    QRadioButton *m_agreeAddButton;
 private slots:
     void    onOkButtonClicked();
     void    onCancleButtonClicked();

@@ -23,7 +23,7 @@ typedef enum  {
   
 }CallbackFunctionType;
 
-enum msg_type{ MSG_INFO,  MSG_ERROR, MSG_WARNING};
+enum msg_type{ MSG_INFO,  MSG_ERROR, MSG_WARNING, MSG_ADD};
 
 typedef  struct CallbackObject {
   
