@@ -197,6 +197,7 @@ static LwqqMsgContent* build_string_content(const char* from,const char* to,Lwqq
     strncpy(write,from,to-from);
     write[to-from]='\0';
     const char *ptr;
+    fprintf(stderr, "bengin while\n");
     while(*read!='\0'){
         if(!trex_search(hs_regex,read,&begin,&end)){
             ptr = strchr(read,'\0');
@@ -252,6 +253,7 @@ static LwqqMsgContent* build_string_content(const char* from,const char* to,Lwqq
         }
         read = end;
     }
+    fprintf(stderr, "end while\n");
     *write = '\0';
     return c;
 }
@@ -333,7 +335,7 @@ int translate_message_to_struct(LwqqClient* lc,const char* to,const char* what,L
     if(_regex==NULL) translate_global_init();
     TRex* x = _regex;
     LwqqMsgMessage* mmsg = (LwqqMsgMessage*)msg;
-    int translate_face=1;
+    int translate_face=0;
      
     while(*ptr!='\0'){
         c = NULL;
@@ -387,31 +389,46 @@ int translate_message_to_struct(LwqqClient* lc,const char* to,const char* what,L
             }
        }else if(*begin==':'&&*(end-1)==':'){
                 fprintf(stderr, "face::::::");
-//            if(strstr(begin,":face")==begin){
-//                sscanf(begin,":face%d:",&img_id);
-//                c = build_face_direct(img_id);
-//            }else if(strstr(begin,":-face:")==begin){
-//                translate_face=!translate_face;
-//            }else{
-//                //other :faces:
-//                c = translate_face?build_face_content(m.begin, m.len):NULL;
-//                if(c==NULL) c = build_string_content(begin, end, mmsg);
-//            }
+            if(strstr(begin,":face")==begin){
+                sscanf(begin,":face%d:",&img_id);
+                c = build_face_direct(img_id);
+            }else if(strstr(begin,":-face:")==begin){
+                translate_face=!translate_face;
+            }else{
+                //other :faces:
+                //c = translate_face?build_face_content(m.begin, m.len):NULL;
+                 c = NULL;
+                if(c==NULL) c = build_string_content(begin, end, mmsg);
+            }
         }else if(begin[0]==':'){
-
+            fprintf(stderr, "begin :\n");
 //            //other :)
 //            c = translate_face?build_face_content(m.begin, m.len):NULL;
-            if(c==NULL) c = build_string_content(begin, end, mmsg);
+//            if(c==NULL)
+//            {
+//                c = s_malloc0(sizeof(*c));
+//                c->type = LWQQ_CONTENT_STRING;
+//                c->data.str = s_strdup(what);
+//                end = what[strlen(what)+1];
+//                fprintf(stderr, "malloc\n");
+//                if(end == '\0')
+//                    fprintf(stderr, "0000\n");
+//            }
+            c = NULL;
+           if(c==NULL) c = build_string_content(begin, end, mmsg);
        }else if(begin[0]=='&'){
         }else{
+             fprintf(stderr, "else :\n");
 //            //other face with no fix style
             //c = translate_face?build_face_content(m.begin,m.len):NULL;
+             c = NULL;
             if(c==NULL) c = build_string_content(begin, end, mmsg);
         }
 #endif
         ptr = end;
         if(c!=NULL)
             lwqq_msg_content_append(mmsg, c);
+        fprintf(stderr, "lwqq_msg_content_append\n");
     }
     return 0;
 }

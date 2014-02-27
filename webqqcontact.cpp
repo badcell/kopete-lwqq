@@ -19,6 +19,11 @@
 #include <QList>
 #include <QDebug>
 #include <QFile>
+#include <sys/stat.h>
+#include <unistd.h>
+#include <libgen.h>
+#include <fcntl.h>
+#include <stdio.h>
 #include <kaction.h>
 #include <kdebug.h>
 #include <klocale.h>
@@ -92,10 +97,13 @@ void WebqqContact::serialize( QMap< QString, QString > &serializedData, QMap< QS
 Kopete::ChatSession* WebqqContact::manager( CanCreateFlags canCreateFlags )
 {
     canCreateFlags = CanCreate;
-    if(m_contactType == Contact_Chat)
+    qDebug()<<"WebqqContact::manager";
+    if(m_contactType == Contact_Chat || m_contactType == Contact_Session)
     {
+        qDebug()<<"Contact_Chat";
         if ( m_chatManager )
         {
+            qDebug()<<"return Contact_Chat";
             return m_chatManager;
         }
         else if ( canCreateFlags == CanCreate )
@@ -103,6 +111,10 @@ Kopete::ChatSession* WebqqContact::manager( CanCreateFlags canCreateFlags )
             Kopete::ContactPtrList contacts;
             contacts.append(this);
             m_chatManager = new WebqqChatSession(protocol(), account()->myself(), contacts);
+            if(m_contactType == Contact_Session)
+            {
+                m_chatManager->setTopic(i18n("%1\nTemporary session from %2", m_displayName, m_sessionName));
+            }
             connect(m_chatManager, SIGNAL(messageSent(Kopete::Message&,Kopete::ChatSession*)),
                     this, SLOT(sendMessage(Kopete::Message&)) );
             connect( m_chatManager, SIGNAL(myselfTyping(bool)), this, SLOT(slotTyping(bool)) );
@@ -267,8 +279,13 @@ void WebqqContact::imageContact(const QString &file)
     kmsg.setDirection( Kopete::Message::Inbound);
     if(m_contactType == Contact_Group || m_contactType == Contact_Discu)
         qq_send_chat(m_userId.toUtf8().constData(), imgFile.toUtf8().constData());
-    else
-        qq_send_im(m_userId.toUtf8().constData(), imgFile.toUtf8().constData());
+    else if(m_contactType == Contact_Chat)
+        qq_send_im(((WebqqAccount*)account())->m_lc, m_userId.toUtf8().constData(), imgFile.toUtf8().constData(), m_contactType);
+    else if(m_contactType == Contact_Session)
+    {
+        QString whoStr = m_userId + " ### " + m_sessionId;
+        qq_send_im(((WebqqAccount*)account())->m_lc, whoStr.toUtf8().constData(), imgFile.toUtf8().constData(), m_contactType);
+    }
 
     // give it back to the manager to display
     manager(CanCreate)->appendMessage( kmsg );
@@ -318,13 +335,18 @@ void WebqqContact::sendMessage( Kopete::Message &message )
 	QString targetQQNumber = message.to().first()->contactId();
     qDebug()<<"member:"<<targetQQNumber<<"userid"<<m_userId;
     qDebug()<<"parsedBody:"<<message.parsedBody();
-    QString messageStr = message.format() ==  Qt::RichText?prepareMessage(message.parsedBody(), message.plainBody()) :message.plainBody();
+    //QString messageStr = message.format() ==  Qt::RichText?prepareMessage(message.parsedBody(), message.plainBody()) :message.plainBody();
+    QString messageStr = prepareMessage(message.parsedBody(), message.plainBody());
     qDebug()<<"send text:"<<messageStr;
     if(m_contactType == Contact_Group || m_contactType == Contact_Discu)
         qq_send_chat(m_userId.toUtf8().constData(), messageStr.toUtf8().constData());
-    else
-        qq_send_im(targetQQNumber.toUtf8().constData(), messageStr.toUtf8().constData());
-	
+    else if(m_contactType == Contact_Chat)
+        qq_send_im(((WebqqAccount*)account())->m_lc, targetQQNumber.toUtf8().constData(), messageStr.toUtf8().constData(), m_contactType);
+    else if(m_contactType == Contact_Session)
+    {
+       QString whoStr = m_userId + " ### " + m_sessionId;
+        qq_send_im(((WebqqAccount*)account())->m_lc, whoStr.toUtf8().constData(), messageStr.toUtf8().constData(), m_contactType);
+    }
 	// give it back to the manager to display
     manager(CanCreate)->appendMessage( message );
 	// tell the manager it was sent successfully
@@ -375,6 +397,12 @@ QString WebqqContact::prepareMessage(const QString &messageText, const QString &
     if(newMsg.indexOf("font-weight:600") >= 0)
         reMsg += "</b>";
     return reMsg;
+}
+
+void WebqqContact::set_session_info(const QString &gid, const QString &name)
+{
+    m_sessionId = gid;
+    m_sessionName = name;
 }
 
 static void cb_send_receipt(LwqqAsyncEvent* ev,LwqqMsg* msg,char* serv_id,char* what)
@@ -469,9 +497,28 @@ static int find_group_and_member_by_card(LwqqClient* lc,const char* card,LwqqGro
     return 0;
 }
 
-int WebqqContact::qq_send_im( const char *who, const char *what)
+static int find_group_and_member_by_gid(LwqqClient* lc,const char* card,LwqqGroup** p_g,LwqqSimpleBuddy** p_sb)
 {
-    LwqqClient* lc = ((WebqqAccount*)account())->m_lc;
+    if(!card) return 0;
+    char uin[128]={0};
+    char gid[128]={0};
+    const char* pos;
+    if((pos = strstr(card," ### "))!=NULL) {
+        strcpy(gid,pos+strlen(" ### "));
+        strncpy(uin,card,pos-card);
+        uin[pos-card] = '\0';
+         *p_g = find_group_by_gid(lc,gid);
+        if(LIST_EMPTY(&(*p_g)->members)){
+            return -1;
+        }
+        *p_sb = lwqq_group_find_group_member_by_uin(*p_g,uin);
+        return 1;
+    }
+    return 0;
+}
+
+int qq_send_im( LwqqClient* lc, const char *who, const char *what, ConType type)
+{
     LwqqMsg* msg;
     LwqqMsgMessage *mmsg;
     qq_account *ac = (qq_account*)(lc->data);
@@ -513,24 +560,53 @@ int WebqqContact::qq_send_im( const char *who, const char *what)
         }
     }
 #else
-    msg = lwqq_msg_new(LWQQ_MS_BUDDY_MSG);
-    mmsg = (LwqqMsgMessage*)msg;
+    LwqqGroup* group = NULL;
+    LwqqSimpleBuddy* sb = NULL;
+    int ret = 0;
+    if((ret = find_group_and_member_by_gid(lc, who, &group, &sb))){
+        if(ret==-1||!sb->group_sig){
+            LwqqAsyncEvent* ev = NULL;
+            if(ret==-1)//member list is empty
+                ev = lwqq_info_get_group_detail_info(lc, group, NULL);
+            else if(!sb->group_sig)
+                ev = lwqq_info_get_group_sig(lc,group,sb->uin);
+            char* who_ = s_strdup(who);
+            char* what_ = s_strdup(what);
+            lwqq_async_add_event_listener(ev, _C_(3pi,qq_send_im,lc,who_,what_,type));
+            lwqq_async_add_event_listener(ev, _C_(p,free,who_));
+            lwqq_async_add_event_listener(ev, _C_(p,free,what_));
+            return 0;
+        }
 
-    LwqqBuddy* buddy = find_buddy_by_qqnumber(lc,who);
-    if(buddy)
-        mmsg->super.to = s_strdup(buddy->uin);
-    else mmsg->super.to = s_strdup(who);
+        msg = lwqq_msg_new(LWQQ_MS_SESS_MSG);
+        mmsg = (LwqqMsgMessage*)msg;
+
+        mmsg->super.to = s_strdup(sb->uin);
+        mmsg->sess.group_sig = s_strdup(sb->group_sig);
+        mmsg->sess.service_type = (LwqqServiceType)group->type;
+    }else
+    {
+        msg = lwqq_msg_new(LWQQ_MS_BUDDY_MSG);
+        mmsg = (LwqqMsgMessage*)msg;
+
+        LwqqBuddy* buddy = find_buddy_by_qqnumber(lc,who);
+        if(buddy)
+            mmsg->super.to = s_strdup(buddy->uin);
+        else mmsg->super.to = s_strdup(who);
+    }
+
+
 #endif
     mmsg->f_name = s_strdup(ac->font.family);
     mmsg->f_size = ac->font.size;
     mmsg->f_style = ac->font.style;
     strcpy(mmsg->f_color,"000000");
-
+    fprintf(stderr, "msg:%s\n", what);
     translate_message_to_struct(NULL, NULL, what, msg, 0);
 
     LwqqAsyncEvent* ev = lwqq_msg_send(lc,mmsg);
     lwqq_async_add_event_listener(ev,_C_(4p, cb_send_receipt,ev,msg,strdup(who),strdup(what)));
-
+    fprintf(stderr, "qq send im\n");
     return 1;
 }
 
@@ -598,9 +674,9 @@ void WebqqContact::slotChatSessionDestroyed()
     }
     else if(m_contactType == Contact_Discu)
     {
-
+        m_discuManager = 0L;
     }
-    else if(m_contactType == Contact_Chat)
+    else if(m_contactType == Contact_Chat || m_contactType == Contact_Session)
         m_chatManager = 0L;
 }
 

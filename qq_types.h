@@ -71,7 +71,9 @@ typedef enum {
         DEBUG_FILE_SEND = 1<<4,
         REMOVE_DUPLICATED_MSG = 1<<5,
         QQ_DONT_EXPECT_100_CONTINUE = 1<<6,
-        NOT_DOWNLOAD_GROUP_PIC = 1<<7
+        NOT_DOWNLOAD_GROUP_PIC = 1<<7,
+        SEND_VISUALBILITY = 1<<8,
+        CACHE_TALKGROUP = 1<<9,
 }lwflags;
 
 //add friend and group info
@@ -80,6 +82,8 @@ typedef struct add_info {
     char* name;
     char* uin;
 }add_info;
+
+enum ConType { Contact_Chat, Contact_Group, Contact_Discu, Contact_Session};
 
 typedef struct qq_account {
     LwqqClient* qq;

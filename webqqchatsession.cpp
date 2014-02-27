@@ -109,6 +109,11 @@ void WebqqChatSession::slotimageContact()
     }
 }
 
+void WebqqChatSession::setTopic(const QString &topic)
+{
+     setDisplayName(i18n("%1", topic));
+}
+
 void WebqqChatSession::slotUserInfo()
 {
 	QList<Kopete::Contact*>contacts = members();

@@ -119,7 +119,7 @@ public slots:
 	void destoryLwqqAccount();
 	void friend_come(LwqqClient *lc, LwqqBuddy *buddy);
 	void group_come(LwqqClient* lc,LwqqGroup* group);
-	
+    void discu_come(LwqqClient* lc,LwqqGroup* group);
     void ac_need_verify2(LwqqClient* lc, LwqqVerifyCode *code);
     void ac_login_stage_1(LwqqClient* lc, LwqqErrorCode *p_err);
 	void ac_login_stage_2(LwqqAsyncEvent* event,LwqqClient* lc);
@@ -189,6 +189,8 @@ private:
      * clean all contact
      */
     void cleanAll_contacts();
+
+    void whisper_message(LwqqClient* lc,LwqqMsgMessage* mmsg);
 
     QString stransMsg(const QString &message);
 

@@ -46,7 +46,6 @@ public:
 	 * The range of possible contact types
 	 */
 	enum Type { Null, Echo, Group };
-    enum ConType { Contact_Chat, Contact_Group, Contact_Discu};
 
 	WebqqContact( Kopete::Account* _account, const QString &uniqueName, 
 			const QString &displayName, 
@@ -90,12 +89,12 @@ public:
 	 */
 	void setDisplayPicture(const QByteArray &data);
 	
-	int qq_send_im( const char *who, const char *what);
+
     int qq_send_chat(const char *gid, const char *message);
     void setContactType(ConType type);
     void webqq_addcontacts(Kopete::Contact *others);
     void set_group_members();
-
+    void set_session_info(const QString &gid, const QString &name);
     void clean_contact();
     static QString prepareMessage(const QString &messageText , const QString &plainText);
 
@@ -137,6 +136,10 @@ protected:
     ConType m_contactType;
     QString m_displayName;
     QString m_userId;
+    QString m_sessionId;
+    QString m_sessionName;
 };
+
+static int qq_send_im(LwqqClient *lc, const char *who, const char *what, ConType type);
 
 #endif

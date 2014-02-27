@@ -32,7 +32,7 @@ class WebqqChatSession : public Kopete::ChatSession
 public:
     WebqqChatSession(Kopete::Protocol *protocol, const Kopete::Contact *user, Kopete::ContactPtrList others);
     ~WebqqChatSession();
-
+    void setTopic( const QString & topic );
 private slots:
 	void slotDisplayPictureChanged();
     void slotimageContact();
