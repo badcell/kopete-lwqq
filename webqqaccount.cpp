@@ -676,7 +676,7 @@ void WebqqAccount::ac_friend_avatar(LwqqClient* lc, LwqqBuddy *buddy)
     /*first set its stat*/
     Kopete::OnlineStatus webqqStatus = statusFromLwqqStatus(buddy->stat);
     friendContact->setOnlineStatus(webqqStatus);
-    
+    friendContact->setContactType(Contact_Chat);
     /*set the contact's icon*/
    // kDebug(WEBQQ_GEN_DEBUG) <<"contact icon:" << bytearry.size();
     if (!bytearry.isEmpty())
@@ -700,6 +700,8 @@ void WebqqAccount::ac_group_avatar(LwqqClient *lc, LwqqGroup *group)
     WebqqContact * contact = dynamic_cast<WebqqContact *>(contacts().value( QString(group->gid) ));
     if ( !contact)
     return;
+
+   contact->setContactType(Contact_Group);
 
     /*first set its stat*/
     //Kopete::OnlineStatus webqqStatus = statusFromLwqqStatus(buddy->stat);
@@ -1022,8 +1024,6 @@ void WebqqAccount::friend_come(LwqqClient* lc,LwqqBuddy* buddy)
 
     addContact( QString(buddy->qqnumber), displayName,  targetGroup, Kopete::Account::ChangeKABC );
     
-    WebqqContact * addedContact = dynamic_cast<WebqqContact *>(contacts().value( QString(buddy->qqnumber) ));
-    addedContact->setContactType(Contact_Chat);
 //    QByteArray data;
 //    data.clear();
 //    addedContact->setDisplayPicture(data);
@@ -1100,56 +1100,6 @@ void WebqqAccount::group_come(LwqqClient* lc,LwqqGroup* group)
 
   //printf("group info:\t\t type: %d\t\t name: %s\t\t markname: %s\n", group->type, group->name, group->markname);
 
-#if 0
-    qq_account* ac = lwqq_client_userdata(lc);
-    ac->disable_send_server = 1;
-    PurpleAccount* account=ac->account;
-    PurpleGroup* qun = purple_group_new(QQ_GROUP_DEFAULT_CATE);
-    PurpleGroup* talk = purple_group_new(_("Discussion"));
-    GHashTable* components;
-    PurpleChat* chat;
-    const char* type;
-    const char* key = try_get(group->account,group->gid);
-
-    if( (chat = purple_blist_find_chat(account,key)) == NULL) {
-        components = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, g_free);
-        g_hash_table_insert(components,g_strdup(QQ_ROOM_KEY_GID),g_strdup(key));
-        type = (group->type==LWQQ_GROUP_QUN)? QQ_ROOM_TYPE_QUN:QQ_ROOM_TYPE_DISCU;
-        g_hash_table_insert(components,g_strdup(QQ_ROOM_TYPE),g_strdup(type));
-        chat = purple_chat_new(account,key,components);
-        purple_blist_add_chat(chat,lwqq_group_is_qun(group)?qun:talk,NULL);
-        //we shouldn't save it.
-        if(!group->account) purple_blist_node_set_flags(PURPLE_BLIST_NODE(chat),PURPLE_BLIST_NODE_FLAG_NO_SAVE);
-    } else {
-        components = chat->components;
-        if(!g_hash_table_lookup(components,QQ_ROOM_TYPE)){
-            type = (group->type==LWQQ_GROUP_QUN)? QQ_ROOM_TYPE_QUN:QQ_ROOM_TYPE_DISCU;
-            g_hash_table_insert(components,s_strdup(QQ_ROOM_TYPE),g_strdup(type));
-        }
-
-        if(!group->account) purple_blist_node_set_flags(PURPLE_BLIST_NODE(chat),PURPLE_BLIST_NODE_FLAG_NO_SAVE);
-    }
-
-    qq_chat_group* cg = qq_cgroup_new(QQ_CG_OPT);
-    group->data = cg;
-    cg->group = group;
-    cg->chat = chat;
-    
-    if(lwqq_group_is_qun(group)){
-        qq_set_group_name(cg);
-        if(purple_buddy_icons_node_has_custom_icon(PURPLE_BLIST_NODE(chat))==0){
-            LwqqAsyncEvent* ev = lwqq_info_get_group_avatar(lc,group);
-            lwqq_async_add_event_listener(ev,_C_(2p,group_avatar,ev,group));
-        }
-    }else{
-        qq_set_group_name(cg);
-    }
-
-    qq_account_insert_index_node(ac, NULL, group);
-
-    ac->disable_send_server = 0;
-#endif
-
     QString categoryName;
     if(group->type == LwqqGroup::LWQQ_GROUP_QUN)
         categoryName = QString("Group");
@@ -1214,13 +1164,9 @@ void WebqqAccount::group_come(LwqqClient* lc,LwqqGroup* group)
     if(group->type == LwqqGroup::LWQQ_GROUP_QUN)
     {
         addContact( QString(group->gid), displayName,  targetGroup, Kopete::Account::ChangeKABC );
-        WebqqContact * addedContact = dynamic_cast<WebqqContact *>(contacts().value( QString(group->gid) ));
-        addedContact->setContactType(Contact_Group);
     }else if(group->type == LwqqGroup::LWQQ_GROUP_DISCU)
     {
         addContact( QString(group->did), displayName,  targetGroup, Kopete::Account::ChangeKABC );
-        WebqqContact * addedContact = dynamic_cast<WebqqContact *>(contacts().value( QString(group->did) ));
-        addedContact->setContactType(Contact_Group);
     }
 
 
@@ -1234,16 +1180,7 @@ void WebqqAccount::ac_login_stage_3(LwqqClient* lc)
   printf("**************stage3\n");
 
   qq_account* ac = lwqq_client_userdata(lc);
-/*
-    purple_connection_set_state(purple_account_get_connection(ac->account),PURPLE_CONNECTED);
 
-    if(!purple_account_get_alias(ac->account))
-        purple_account_set_alias(ac->account,lc->myself->nick);
-    if(purple_buddy_icons_find_account_icon(ac->account)==NULL){
-        LwqqAsyncEvent* ev=lwqq_info_get_friend_avatar(lc,lc->myself);
-        lwqq_async_add_event_listener(ev,_C_(2p,friend_avatar,ac,lc->myself));
-    }
-*/
     LwqqAsyncEvent* ev = NULL;
 
     lwdb_userdb_flush_buddies(ac->db, 5,5);
@@ -1252,23 +1189,6 @@ void WebqqAccount::ac_login_stage_3(LwqqClient* lc)
     if(ac->flag & QQ_USE_QQNUM){  //QQ_USE_QQNUM
         lwdb_userdb_query_qqnumbers(ac->db,lc);
     }
-/*
-    //we must put buddy and group clean before any add operation.
-    GSList* ptr = purple_blist_get_buddies();
-    while(ptr){
-        PurpleBuddy* buddy = ptr->data;
-        if(buddy->account == ac->account){
-            const char* qqnum = purple_buddy_get_name(buddy);
-            //if it isn't a qqnumber,we should delete it whatever.
-            if(lwqq_buddy_find_buddy_by_qqnumber(lc,qqnum)==NULL){
-                purple_blist_remove_buddy(buddy);
-            }
-        }
-        ptr = ptr->next;
-    }
-*/
-    //clean extra duplicated node
-//    all_reset(ac,RESET_GROUP_SOFT|RESET_DISCU);
 
     LwqqAsyncEvset* set = lwqq_async_evset_new();
     LwqqBuddy* buddy;
@@ -1353,37 +1273,6 @@ void WebqqAccount::ac_login_stage_3(LwqqClient* lc)
 
 void WebqqAccount::ac_login_stage_f(LwqqClient* lc)
 {
-  /*   
-    printf("ac_login_stage_f\n");
-    qq_account* ac = lwqq_client_userdata(lc);
-    LwqqBuddy *buddy;
-    LIST_FOREACH(buddy,&lc->friends,entries) {
-	printf("query friend\n");
-	printf("buddy's uin is %s,last_modify is %d, qqnumber is %s\n", buddy->uin, buddy->last_modify,buddy->qqnumber);
-	lwdb_userdb_query_buddy(ac->db, buddy);
-	addContact( QString(buddy->qqnumber), QString(buddy->qqnumber),  0L, Kopete::Account::ChangeKABC ); 
-    }
-
-
-    LwqqBuddy* buddy;
-    LwqqGroup* group;
-    qq_account* ac = lc->data;
-    lwdb_userdb_begin(ac->db);
-    LIST_FOREACH(buddy,&lc->friends,entries) {
-        if(buddy->last_modify == -1 || buddy->last_modify == 0){
-            lwdb_userdb_insert_buddy_info(ac->db, buddy);
-            friend_come(lc, buddy);
-        }
-    }
-    LIST_FOREACH(group,&lc->groups,entries){
-        if(group->last_modify == -1 || group->last_modify == 0){
-            lwdb_userdb_insert_group_info(ac->db, group);
-            group_come(lc,group);
-        }
-    }
-    lwdb_userdb_commit(ac->db);
-*/
-    //initCategory();
     LwqqBuddy* buddy;
     LwqqGroup* group,*discu;
     qq_account* ac = lc->data;
@@ -1469,16 +1358,6 @@ void WebqqAccount::connectWithPassword( const QString &passwd )
 	
 	static_cast<WebqqContact *>( myself() )->setOnlineStatus( m_protocol->WebqqConnecting );
 	
-#if 0
-	/*first clean all contact list*/
-	QHashIterator<QString, Kopete::Contact*>itr( contacts() );
-	for ( ; itr.hasNext(); ) {
-		itr.next();
-		Kopete::DeleteContactTask *deleteTask = new Kopete::DeleteContactTask(itr.value());
-		deleteTask->start();
-	}
-	
-#endif   
 
 	/*
 	 * !Urgly, 
@@ -2091,12 +1970,10 @@ static void search_buddy_receipt(LwqqAsyncEvent* ev,LwqqBuddy* buddy,char* uni_i
     }
     if(err == LWQQ_EC_NO_RESULT){
         cb_show_messageBox(MSG_ERROR, s_strdup("Error Message"), s_strdup("Account not exists or not main display account"));
-        //purple_notify_message(ac->gc,PURPLE_NOTIFY_MSG_INFO,_("Error Message"),_("Account not exists or not main display account"),NULL,NULL,NULL);
         goto failed;
     }
     if(!buddy->token){
         cb_show_messageBox(MSG_ERROR, s_strdup("Error Message"), s_strdup("Get friend infomation failed"));
-        //purple_notify_message(ac->gc,PURPLE_NOTIFY_MSG_INFO,_("Error Message"),_("Get friend infomation failed"),NULL,NULL,NULL);
         goto failed;
     }
 
@@ -2141,7 +2018,6 @@ static void add_group_receipt(LwqqAsyncEvent* ev,LwqqGroup* g)
     qq_account* ac = lc->data;
     if(err == 6 ){
         cb_show_messageBox(MSG_ERROR, s_strdup("Error Message"), s_strdup("ErrCode:6\nPlease try agagin later\n"));
-        //purple_notify_message(ac->gc,PURPLE_NOTIFY_MSG_INFO,_("Error Message"),_("ErrCode:6\nPlease try agagin later\n"),NULL,NULL,NULL);
     }
     lwqq_group_free(g);
 }
@@ -2168,7 +2044,6 @@ static void search_group_receipt(LwqqAsyncEvent* ev,LwqqGroup* g)
     }
     if(err == LWQQ_EC_NO_RESULT){
         cb_show_messageBox(MSG_ERROR, s_strdup("Error Message"), s_strdup("Get QQ Group Infomation Failed"));
-        //purple_notify_message(ac->gc,PURPLE_NOTIFY_MSG_INFO,_("Error Message"),_("Get QQ Group Infomation Failed"),NULL,NULL,NULL);
         lwqq_group_free(g);
         return;
     }

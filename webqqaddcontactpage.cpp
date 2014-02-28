@@ -53,7 +53,7 @@ bool WebqqAddContactPage::apply( Kopete::Account* a, Kopete::MetaContact* m )
 {
 	if ( validateData() )
 	{
-        qDebug()<<"WebqqAddContactPage::apply";
+        kDebug(WEBQQ_GEN_DEBUG);
 		QString name = m_webqqAddUI.m_uniqueName->text();
         WebqqAccount *acc = dynamic_cast< WebqqAccount *>(a);
         QStringList groupNames;
@@ -66,17 +66,6 @@ bool WebqqAddContactPage::apply( Kopete::Account* a, Kopete::MetaContact* m )
                 groupNames += QString();
         }
         acc->find_add_contact(name, (m_webqqAddUI.m_rbEcho->isChecked() ? WebqqAccount::Buddy : WebqqAccount::Group), groupNames.at(0));
-//		if ( a->addContact(name, m, Kopete::Account::ChangeKABC ) )
-//		{
-//			WebqqContact * newContact = qobject_cast<WebqqContact*>( Kopete::ContactList::self()->findContact( a->protocol()->pluginId(), a->accountId(), name ) );
-//			if ( newContact )
-//			{
-//				newContact->setType( m_webqqAddUI.m_rbEcho->isChecked() ? WebqqContact::Echo : WebqqContact::Group );
-//				return true;
-//			}
-//		}
-//		else
-//			return false;
 	}
 	return false;
 }
