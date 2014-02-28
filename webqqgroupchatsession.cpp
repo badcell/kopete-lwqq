@@ -38,20 +38,20 @@ WebqqGroupChatSession::WebqqGroupChatSession( Kopete::Protocol *protocol, const 
 {
 	Kopete::ChatSessionManager::self()->registerChatSession( this );
 	setComponentData(protocol->componentData());
-    KAction *buzzAction = new KAction( KIcon("bell"), i18n( "Buzz Contact" ), this );
-        actionCollection()->addAction( "WebqqBuzz", buzzAction );
-    //buzzAction->setShortcut( KShortcut("Ctrl+G") );
-    //connect( buzzAction, SIGNAL(triggered(bool)), this, SLOT(slotBuzzContact()) );
+//    KAction *buzzAction = new KAction( KIcon("bell"), i18n( "Buzz Contact" ), this );
+//        actionCollection()->addAction( "WebqqBuzz", buzzAction );
+//    //buzzAction->setShortcut( KShortcut("Ctrl+G") );
+//    //connect( buzzAction, SIGNAL(triggered(bool)), this, SLOT(slotBuzzContact()) );
 
-    KAction *imageAction = new KAction( KIcon("image"), i18n( "Image send" ), this );
-        actionCollection()->addAction( "Webqqimage", imageAction );
-    //buzzAction->setShortcut( KShortcut("Ctrl+G") );
-    //connect( imageAction, SIGNAL(triggered(bool)), this, SLOT(slotimageContact()) );
+//    KAction *imageAction = new KAction( KIcon("image"), i18n( "Image send" ), this );
+//        actionCollection()->addAction( "Webqqimage", imageAction );
+//    //buzzAction->setShortcut( KShortcut("Ctrl+G") );
+//    //connect( imageAction, SIGNAL(triggered(bool)), this, SLOT(slotimageContact()) );
 
-    KAction *userInfoAction = new KAction( KIcon("help-about"), i18n( "Show User Info" ), this );
-        actionCollection()->addAction( "WebqqShowInfo",  userInfoAction) ;
+//    KAction *userInfoAction = new KAction( KIcon("help-about"), i18n( "Show User Info" ), this );
+//        actionCollection()->addAction( "WebqqShowInfo",  userInfoAction) ;
     //connect( userInfoAction, SIGNAL(triggered(bool)), this, SLOT(slotUserInfo()) );
-    setXMLFile("webqqgroupui.rc");
+    //setXMLFile("webqqgroupui.rc");
 }
 
 WebqqGroupChatSession::~WebqqGroupChatSession()

@@ -97,13 +97,10 @@ void WebqqContact::serialize( QMap< QString, QString > &serializedData, QMap< QS
 Kopete::ChatSession* WebqqContact::manager( CanCreateFlags canCreateFlags )
 {
     canCreateFlags = CanCreate;
-    qDebug()<<"WebqqContact::manager";
     if(m_contactType == Contact_Chat || m_contactType == Contact_Session)
     {
-        qDebug()<<"Contact_Chat";
         if ( m_chatManager )
         {
-            qDebug()<<"return Contact_Chat";
             return m_chatManager;
         }
         else if ( canCreateFlags == CanCreate )
@@ -127,15 +124,12 @@ Kopete::ChatSession* WebqqContact::manager( CanCreateFlags canCreateFlags )
         }
     }else if(m_contactType == Contact_Group)
     {
-        qDebug()<<"group manager";
         if ( m_groupManager )
         {
-            qDebug()<<"m_groupManager";
             return m_groupManager;
         }
         else if ( canCreateFlags == CanCreate )
         {
-            qDebug()<<"cancreate";
             Kopete::ContactPtrList contacts;
             contacts.append(this);
             m_groupManager = new WebqqGroupChatSession(protocol(), account()->myself(), contacts);
@@ -155,7 +149,6 @@ Kopete::ChatSession* WebqqContact::manager( CanCreateFlags canCreateFlags )
         }
         else
         {
-            qDebug()<<"0";
             return 0;
         }
     }else if(m_contactType == Contact_Discu)
@@ -209,7 +202,7 @@ void WebqqContact::deleteContact()
 {
     if (!(((WebqqAccount*)account())->isOffline()))
     {
-        qDebug()<<"delete is connect";
+        kDebug(WEBQQ_GEN_DEBUG)<<"delete is connect";
         if(m_type == Contact_Chat)
         {
             LwqqClient* lc = ((WebqqAccount*)account())->m_lc;
@@ -222,7 +215,7 @@ void WebqqContact::deleteContact()
     }
     else
     {
-        qDebug()<<"not connect";
+        kDebug(WEBQQ_GEN_DEBUG)<<"not connect";
         KMessageBox::error (Kopete::UI::Global::mainWidget (),
                             i18n
                             ("<qt>You need to go online to remove a contact from your contact list. This contact will appear again when you reconnect.</qt>"),
@@ -232,7 +225,7 @@ void WebqqContact::deleteContact()
 
 void WebqqContact::clean_contact()
 {
-    qDebug()<<"delete later";
+    kDebug(WEBQQ_GEN_DEBUG)<<"delete later";
     Kopete::DeleteContactTask *deleteTask = new Kopete::DeleteContactTask(this);
     deleteTask->start();
 }
@@ -247,7 +240,7 @@ void WebqqContact::setDisplayPicture(const QByteArray &data)
 	entry.contact = this;
     entry.image = QImage::fromData(data);
 	entry = Kopete::AvatarManager::self()->add(entry);
-    //qDebug() <<"setDisplayPicture:"<< entry.dataPath;
+    //kDebug(WEBQQ_GEN_DEBUG) <<"setDisplayPicture:"<< entry.dataPath;
 	if (!entry.dataPath.isNull())
 	{
         this->removeProperty(Kopete::Global::Properties::self()->photo());
@@ -255,7 +248,7 @@ void WebqqContact::setDisplayPicture(const QByteArray &data)
         this->setProperty( Kopete::Global::Properties::self()->photo() , entry.dataPath );
 //        this->setIcon(entry.dataPath);
 //        this->setUseCustomIcon(true);
-        //qDebug() << "datePath:" << entry.dataPath;
+        //kDebug(WEBQQ_GEN_DEBUG) << "datePath:" << entry.dataPath;
 		//emit displayPictureChanged();
 	}
 }
@@ -270,7 +263,7 @@ void WebqqContact::slotUserInfo()
 void WebqqContact::imageContact(const QString &file)
 {
     QString imgFile = QString("<img src=\"%1\"/>").arg(file);
-    qDebug()<<"img html:"<<imgFile;
+    kDebug(WEBQQ_GEN_DEBUG)<<"img html:"<<imgFile;
     manager(CanCreate)->setLastUrl(file);
     Kopete::ContactPtrList justMe;
     justMe.append(account()->myself());
@@ -333,11 +326,10 @@ void WebqqContact::sendMessage( Kopete::Message &message )
 
 	/*this is for test*/    
 	QString targetQQNumber = message.to().first()->contactId();
-    qDebug()<<"member:"<<targetQQNumber<<"userid"<<m_userId;
-    qDebug()<<"parsedBody:"<<message.parsedBody();
-    //QString messageStr = message.format() ==  Qt::RichText?prepareMessage(message.parsedBody(), message.plainBody()) :message.plainBody();
-    QString messageStr = prepareMessage(message.parsedBody(), message.plainBody());
-    qDebug()<<"send text:"<<messageStr;
+    kDebug(WEBQQ_GEN_DEBUG)<<"parsedBody:"<<message.parsedBody()<<message.plainBody();
+    QString messageStr = message.format() ==  Qt::RichText?prepareMessage(message.parsedBody(), message.plainBody()) :message.plainBody();
+    //QString messageStr = prepareMessage(message.parsedBody(), message.plainBody());
+    kDebug(WEBQQ_GEN_DEBUG)<<"send text:"<<messageStr;
     if(m_contactType == Contact_Group || m_contactType == Contact_Discu)
         qq_send_chat(m_userId.toUtf8().constData(), messageStr.toUtf8().constData());
     else if(m_contactType == Contact_Chat)
@@ -643,7 +635,7 @@ int WebqqContact::qq_send_chat(const char *gid, const char *message)
 
 void WebqqContact::receivedMessage( const QString &message )
 {
-    qDebug() << "receivedMessage:" << message;
+    kDebug(WEBQQ_GEN_DEBUG) << "receivedMessage:" << message;
     QDateTime msgDT;
     msgDT.setTime_t(time(0L));
     Kopete::ContactPtrList contactList;

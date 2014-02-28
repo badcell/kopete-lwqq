@@ -51,7 +51,7 @@ extern "C"
 #define QQ_ROOM_TYPE "type"
 #define QQ_ROOM_TYPE_QUN "qun"
 #define QQ_ROOM_TYPE_DISCU "discu"
-
+const int WEBQQ_GEN_DEBUG = 14210;
 typedef struct {
     enum {NODE_IS_BUDDY,NODE_IS_GROUP} type;
     const void* node;
