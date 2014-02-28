@@ -474,7 +474,7 @@ void WebqqAccount::group_message(LwqqClient *lc, LwqqMsgMessage *msg)
     /*find the contact*/
     WebqqContact * chatContact = dynamic_cast<WebqqContact *>(contacts().value( QString(group->gid) ));
     if ( !chatContact)
-    return;
+        return;
     justMe.append(myself());
     QString sendMsg = stransMsg(QString::fromUtf8(buf));
     if((buddy = find_buddy_by_uin(lc,msg->group.send)))
@@ -508,6 +508,7 @@ void WebqqAccount::group_message(LwqqClient *lc, LwqqMsgMessage *msg)
     kmsg.setTimestamp( msgDT );
     kmsg.setHtmlBody(sendMsg);
     kmsg.setDirection( Kopete::Message::Inbound );
+    chatContact->setContactType(Contact_Group);
     chatContact->manager(Kopete::Contact::CanCreate)->appendMessage(kmsg);
 }
 
