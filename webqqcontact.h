@@ -124,6 +124,8 @@ protected slots:
 	void slotChatSessionDestroyed();
 private slots:
     void slotTyping( bool );
+signals:
+    void getGroupMembersSignal(QString);
 protected:
     WebqqChatSession* m_chatManager;
     WebqqGroupChatSession* m_groupManager;

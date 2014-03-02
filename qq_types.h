@@ -10,7 +10,7 @@ extern "C"
 }
 #include "config.h"
 #include "js.h"
-
+#include <glib.h>
 #ifdef ENABLE_NLS
 //#include <glib/gi18n.h>
 //#include <locale.h>
@@ -56,6 +56,12 @@ typedef struct {
     enum {NODE_IS_BUDDY,NODE_IS_GROUP} type;
     const void* node;
 }index_node;
+
+typedef struct {
+    GList* msg_list;
+    unsigned int unread_num;
+}group_msg_list;
+
 typedef enum 
 {
     DISCONNECT,

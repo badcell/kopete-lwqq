@@ -124,6 +124,7 @@ Kopete::ChatSession* WebqqContact::manager( CanCreateFlags canCreateFlags )
         }
     }else if(m_contactType == Contact_Group)
     {
+        qDebug()<<"group manager";
         if ( m_groupManager )
         {
             return m_groupManager;
@@ -145,6 +146,7 @@ Kopete::ChatSession* WebqqContact::manager( CanCreateFlags canCreateFlags )
             connect(m_groupManager, SIGNAL(messageSent(Kopete::Message&,Kopete::ChatSession*)),
                     this, SLOT(sendMessage(Kopete::Message&)) );
             connect(m_groupManager, SIGNAL(destroyed()), this, SLOT(slotChatSessionDestroyed()));
+            emit getGroupMembersSignal(m_userId);
             return m_groupManager;
         }
         else
@@ -233,7 +235,7 @@ void WebqqContact::clean_contact()
 void WebqqContact::setDisplayPicture(const QByteArray &data)
 {
 	//setProperty( WebqqProtocol::protocol()->iconCheckSum, checksum );	
-	
+    qDebug()<<"setDisplayPicture";
 	Kopete::AvatarManager::AvatarEntry entry;
 	entry.name = contactId();
 	entry.category = Kopete::AvatarManager::Contact;

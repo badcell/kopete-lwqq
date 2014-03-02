@@ -38,12 +38,12 @@ namespace Kopete
 	class Contact;
 	class MetaContact;
 	class StatusMessage;
+    class Message;
 }
 
 class WebqqProtocol;
 class QByteArray;
 class WebqqContact;
-
 
 /**
  * This represents an account connected to the webqq
@@ -60,11 +60,8 @@ public:
 	 */
 	virtual void fillActionMenu( KActionMenu *actionMenu );
 
-	/**
-	 * Creates a protocol specific Kopete::Contact subclass and adds it to the supplie
-	 * Kopete::MetaContact
-	 */
-	virtual bool createContact(const QString& contactId, Kopete::MetaContact* parentContact);
+
+
 	/**
 	 * Called when Kopete is set globally away
 	 */
@@ -132,11 +129,15 @@ public slots:
     void ac_show_confirm_table(LwqqClient* lc, LwqqConfirmTable* table, add_info *info);
     void ac_show_messageBox(msg_type type, const char *title, const char *message );
     void ac_friend_come(LwqqClient* lc,LwqqBuddy* b);
+    void ac_rewrite_whole_message_list(LwqqAsyncEvent* ev,qq_account* ac,LwqqGroup* group);
 	void slotReceivedInstanceSignal(CallbackObject cb);
     void blist_change(LwqqClient* lc,LwqqMsgBlistChange* blist);
 	void pollMessage();
 	void afterLogin();
-	
+    /**
+     * get group or disu all members
+     */
+    void slotGetGroupMembers(QString id);
 	
 
 protected:
@@ -144,8 +145,12 @@ protected:
 	 * This simulates contacts going on and offline in sync with the account's status changes
 	 */
 	void updateContactStatus();
-
-
+    /**
+     * Creates a protocol specific Kopete::Contact subclass and adds it to the supplie
+     * Kopete::MetaContact
+     */
+    virtual bool createContact(const QString &contactId,  Kopete::MetaContact *parentContact);
+    bool createChatSessionContact( const QString &id, const QString &name );
 protected slots:
 	/**
 	 * Change the account's status.  Called by KActions and internally.
@@ -171,7 +176,8 @@ protected slots:
 	 * change the account's status, called by Kactions and internally.
 	 */
 	void slotGoHidden();
-	
+
+
 private: 
     /*
      *  use lwqq library login
@@ -191,6 +197,8 @@ private:
     void cleanAll_contacts();
 
     void whisper_message(LwqqClient* lc,LwqqMsgMessage* mmsg);
+
+    void receivedGroupMessage(LwqqGroup* group, LwqqMsgMessage *msg);
 
     QString stransMsg(const QString &message);
 
@@ -227,6 +235,7 @@ static void cb_upload_content_fail(LwqqClient* lc, const char **serv_id, LwqqMsg
 static void cb_delete_group_local(LwqqClient* lc, const LwqqGroup **g);
 static void cb_flush_group_members(LwqqClient* lc, LwqqGroup **g);
 static void cb_return_friend_come(LwqqClient* lc,LwqqBuddy* b);
+static void cb_rewrite_whole_message_list(LwqqAsyncEvent* ev,qq_account* ac,LwqqGroup* group);
 static void confirm_table_yes(LwqqConfirmTable* table, const char *input, LwqqAnswer answer);
 static void confirm_table_no(LwqqConfirmTable* table,const char *input);
 static void system_message(LwqqClient* lc,LwqqMsgSystem* system,LwqqBuddy* buddy);

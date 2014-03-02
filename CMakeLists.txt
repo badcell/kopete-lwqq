@@ -23,6 +23,7 @@ include(CheckTypeSize)
 
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(LIBJS REQUIRED mozjs185)
+pkg_check_modules(GLIB REQUIRED  glib-2.0)
 
 
 set(CMAKE_REQUIRED_DEFINITIONS ${_KDE4_PLATFORM_DEFINITIONS})
@@ -78,6 +79,11 @@ ${CMAKE_CURRENT_SOURCE_DIR}/ui/
 ${CMAKE_CURRENT_SOURCE_DIR}/liblwqq/lib/
 )
 
+link_directories( 
+	${GLIB_LIBRARY_DIR}
+)
+
+include_directories(${GLIB_INCLUDE_DIRS})
 
 ########### next target ###############
 
@@ -119,7 +125,7 @@ kde4_add_plugin(kopete_webqq ${kopete_webqq_PART_SRCS})
 
 
 #target_link_libraries(kopete_webqq ${KDE4_KIO_LIBS} kopete  pthread lwqq sqlite3 z curl ${LIBJS_LIBRARIES} ${EV_LIBRARIES})
-target_link_libraries(kopete_webqq ${KDE4_KIO_LIBS} kopete  lwqq ${LIBJS_LIBRARIES})
+target_link_libraries(kopete_webqq ${KDE4_KIO_LIBS} kopete  lwqq ${LIBJS_LIBRARIES} glib-2.0)
 if(NOT DISABLE_VIDEOSUPPORT)
   target_link_libraries(kopete_webqq kopete_videodevice)
 endif(NOT DISABLE_VIDEOSUPPORT)

@@ -21,6 +21,7 @@ typedef enum  {
   SHOW_CONFIRM,/*call ac_show_confirm_table(LwqqClient* lc,LwqqConfirmTable* table);*/
   SHOW_MESSAGE,
   FRIEND_COME,
+  REWRITE_MSG,
   
 }CallbackFunctionType;
 
