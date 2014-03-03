@@ -67,7 +67,7 @@
 #include <kopetetransfermanager.h>
 #include <kopeteview.h>
 #include <kopeteaddedinfoevent.h>
-
+#include "kopeteavatarmanager.h"
 
 #include "webqqcontact.h"
 #include "webqqprotocol.h"
@@ -265,9 +265,9 @@ void WebqqAccount::destoryLwqqAccount()
         qq_cgroup_free((qq_chat_group*)g->data);
     }
 */
-    lwqq_client_free(ac->qq);
-    lwdb_userdb_free(ac->db);
-    qq_account_free(ac);
+//    lwqq_client_free(ac->qq);
+//    lwdb_userdb_free(ac->db);
+//    qq_account_free(ac);
 //   purple_connection_set_protocol_data(gc,NULL);
     //translate_global_free();
 /*
@@ -791,31 +791,47 @@ void WebqqAccount::ac_friend_avatar(LwqqClient* lc, LwqqBuddy *buddy)
     kDebug(WEBQQ_GEN_DEBUG)<<"buddy qqname:"<<QString::fromUtf8(buddy->qqnumber)<<"uin:"<<QString::fromUtf8(buddy->uin);
     /*find out the contact*/ 
     //kDebug(WEBQQ_GEN_DEBUG)<<"find out the contact";
-    WebqqContact * friendContact;
-    if ( !contact(QString::fromUtf8(buddy->qqnumber)))
+    if(strcmp(buddy->qqnumber, m_lc->myself->qqnumber) == 0)
     {
-        if(!contact(QString::fromUtf8(buddy->uin)))
-            return;
-        else
-            friendContact = contact(QString::fromUtf8(buddy->uin));
-    }else
-        friendContact = contact(QString::fromUtf8(buddy->qqnumber));
-    /*first set its stat*/
-    Kopete::OnlineStatus webqqStatus = statusFromLwqqStatus(buddy->stat);
-    friendContact->setOnlineStatus(webqqStatus);
-    friendContact->setContactType(Contact_Chat);
-    /*set the contact's icon*/
-   // kDebug(WEBQQ_GEN_DEBUG) <<"contact icon:" << bytearry.size();
-    if (!bytearry.isEmpty())
-    {
-      friendContact->setDisplayPicture(bytearry);
+        Kopete::AvatarManager::AvatarEntry entry;
+        entry.name = myself ()->contactId();;
+        entry.category = Kopete::AvatarManager::Contact;
+        entry.contact = myself();
+        entry.image = QImage::fromData(bytearry);
+        entry = Kopete::AvatarManager::self()->add(entry);
+        if (!entry.dataPath.isNull())
+        {
+            myself()->setProperty(Kopete::Global::Properties::self()->photo (), entry.dataPath);
+        }
+        myself()->setOnlineStatus( m_targetStatus );
     }else{
+        WebqqContact * friendContact;
+        if ( !contact(QString::fromUtf8(buddy->qqnumber)))
+        {
+            if(!contact(QString::fromUtf8(buddy->uin)))
+                return;
+            else
+                friendContact = contact(QString::fromUtf8(buddy->uin));
+        }else
+            friendContact = contact(QString::fromUtf8(buddy->qqnumber));
+        /*first set its stat*/
+        Kopete::OnlineStatus webqqStatus = statusFromLwqqStatus(buddy->stat);
+        friendContact->setOnlineStatus(webqqStatus);
+        friendContact->setContactType(Contact_Chat);
+        /*set the contact's icon*/
+        // kDebug(WEBQQ_GEN_DEBUG) <<"contact icon:" << bytearry.size();
+        if (!bytearry.isEmpty())
+        {
+            friendContact->setDisplayPicture(bytearry);
+        }else{
 
-        //kDebug(WEBQQ_GEN_DEBUG)<<"avatarData size:" << avatarData.size();
-        //QFile::remove(filename);
-        friendContact->setDisplayPicture(avatarData);
+            //kDebug(WEBQQ_GEN_DEBUG)<<"avatarData size:" << avatarData.size();
+            //QFile::remove(filename);
+            friendContact->setDisplayPicture(avatarData);
+        }
     }
-  
+    buddy->avatar = NULL;
+    buddy->avatar_len = 0;
 }
 
 void WebqqAccount::ac_group_avatar(LwqqClient *lc, LwqqGroup *group)
@@ -921,8 +937,14 @@ void WebqqAccount::ac_group_members(LwqqClient *lc, LwqqGroup *group)
                 }
             }
         }
+        WebqqContact *gContact = contact(QString((group->type == LwqqGroup::LWQQ_GROUP_QUN? group->gid:group->did)));
+        if(gContact)
+        {
+            gContact->set_group_members();
+            gContact->setOnlineStatus( WebqqProtocol::protocol()->WebqqOnline);
+        }
     }
-    contact(QString((group->type == LwqqGroup::LWQQ_GROUP_QUN? group->gid:group->did)))->set_group_members();
+
 #if 0
     LIST_FOREACH(member,&group->members,entries)
     {
@@ -1397,12 +1419,14 @@ void WebqqAccount::ac_login_stage_3(LwqqClient* lc)
     if(ac->flag & QQ_USE_QQNUM){  //QQ_USE_QQNUM
         lwdb_userdb_query_qqnumbers(ac->db,lc);
     }
+    myself ()->setProperty (Kopete::Global::Properties::self ()->nickName (),
+                            QString::fromUtf8(lc->myself->nick));
+    ev=lwqq_info_get_friend_avatar(lc,lc->myself);
+    lwqq_async_add_event_listener(ev,_C_(2p,cb_friend_avatar,ac,lc->myself));
 
     LwqqAsyncEvset* set = lwqq_async_evset_new();
     LwqqBuddy* buddy;
     LIST_FOREACH(buddy,&lc->friends,entries) {
-	//printf("query friend\n");
-	//printf("buddy's uin is %s,last_modify is %d, qqnumber is %s\n", buddy->uin, buddy->last_modify,buddy->qqnumber);
         lwdb_userdb_query_buddy(ac->db, buddy);
         //if((ac->flag& 1 )&& ! buddy->qqnumber){ //QQ_USE_QQNUM =1
 	if(! buddy->qqnumber){
@@ -1444,7 +1468,7 @@ void WebqqAccount::ac_login_stage_3(LwqqClient* lc)
         if(group->last_modify != -1 && group->last_modify != 0)
             group_come(lc,group);
     }
-    lwqq_async_add_evset_listener(set, _C_(p,cb_login_stage_f,lc));
+
     //after this we finished the qqnumber fast index.
 
     //we should always put discu after group deletion.
@@ -1466,8 +1490,8 @@ void WebqqAccount::ac_login_stage_3(LwqqClient* lc)
             discu_come(lc, discu);
         }
     }
+    lwqq_async_add_evset_listener(set, _C_(p,cb_login_stage_f,lc));
 
-    myself()->setOnlineStatus( m_targetStatus );
     ac->state = LOAD_COMPLETED;
     LwqqPollOption flags = POLL_AUTO_DOWN_DISCU_PIC|POLL_AUTO_DOWN_GROUP_PIC|POLL_AUTO_DOWN_BUDDY_PIC;
     if(ac->flag& REMOVE_DUPLICATED_MSG)
