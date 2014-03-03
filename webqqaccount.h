@@ -140,7 +140,7 @@ public slots:
      */
     void slotGetGroupMembers(QString id);
 	
-    void slotBlock();
+    void slotBlock(QString id);
 protected:
 	/**
 	 * This simulates contacts going on and offline in sync with the account's status changes

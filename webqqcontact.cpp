@@ -25,6 +25,7 @@
 #include <fcntl.h>
 #include <stdio.h>
 #include <kaction.h>
+#include <KActionCollection>
 #include <kdebug.h>
 #include <klocale.h>
 #include <kmessagebox.h>

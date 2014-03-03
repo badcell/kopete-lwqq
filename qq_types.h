@@ -10,7 +10,6 @@ extern "C"
 }
 #include "config.h"
 #include "js.h"
-#include <glib.h>
 #ifdef ENABLE_NLS
 //#include <glib/gi18n.h>
 //#include <locale.h>
