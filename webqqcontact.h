@@ -124,8 +124,10 @@ protected slots:
 	void slotChatSessionDestroyed();
 private slots:
     void slotTyping( bool );
+    void slotBlock();
 signals:
     void getGroupMembersSignal(QString);
+    void blockSignal(QString);
 protected:
     WebqqChatSession* m_chatManager;
     WebqqGroupChatSession* m_groupManager;
@@ -140,6 +142,9 @@ protected:
     QString m_userId;
     QString m_sessionId;
     QString m_sessionName;
+    KAction* m_blockAction;
+    KAction* m_profileAction;
+    WebqqAccount* m_account;
 };
 
 static int qq_send_im(LwqqClient *lc, const char *who, const char *what, ConType type);

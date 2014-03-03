@@ -1374,11 +1374,13 @@ void WebqqAccount::group_come(LwqqClient* lc,LwqqGroup* group)
     {
         addContact( QString(group->gid), displayName,  targetGroup, Kopete::Account::ChangeKABC );
         QObject::connect(contact(QString(group->gid)) , SIGNAL(getGroupMembersSignal(QString)), this, SLOT(slotGetGroupMembers(QString)));
+        QObject::connect(contact(QString(group->gid)) , SIGNAL(blockSignal(QString)), this, SLOT(slotBlock(QString)));
 
     }else if(group->type == LwqqGroup::LWQQ_GROUP_DISCU)
     {
         addContact( QString(group->did), displayName,  targetGroup, Kopete::Account::ChangeKABC );
         QObject::connect(contact(QString(group->did)) , SIGNAL(getGroupMembersSignal(QString)), this, SLOT(slotGetGroupMembers(QString)));
+        QObject::connect(contact(QString(group->did)) , SIGNAL(blockSignal(QString)), this, SLOT(slotBlock(QString)));
     }
 
 
@@ -1878,6 +1880,11 @@ void WebqqAccount::ac_show_messageBox(msg_type type, const char *title, const ch
 void WebqqAccount::ac_friend_come(LwqqClient *lc, LwqqBuddy *b)
 {
     friend_come(lc, b);
+}
+
+void WebqqAccount::slotBlock(QString id)
+{
+
 }
 
 static void cb_need_verify2(LwqqClient* lc,LwqqVerifyCode** code)

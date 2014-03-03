@@ -62,6 +62,7 @@ WebqqContact::WebqqContact( Kopete::Account* _account, const QString &uniqueName
     m_groupManager = 0L;
     m_discuManager = 0L;
     m_isGroupDestory = false;
+    m_account = _account;
 	setOnlineStatus( WebqqProtocol::protocol()->WebqqOffline );
 }
 
@@ -184,14 +185,35 @@ void WebqqContact::webqq_addcontacts(Kopete::Contact *others)
 
 
 QList<KAction *> *WebqqContact::customContextMenuActions() //OBSOLETE
-{
-	//FIXME!!!  this function is obsolete, we should use XMLGUI instead
-	/*m_actionCollection = new KActionCollection( this, "userColl" );
-	m_actionPrefs = new KAction(i18n( "&Contact Settings" ), 0, this,
-			SLOT(showContactSettings()), m_actionCollection, "contactSettings" );
+{	
+    QList<KAction*> *actions = new QList<KAction*>();
+    if(m_contactType == Contact_Group)
+    {
+        if(!m_blockAction)
+        {
+            m_blockAction = new KAction( KIcon("webcamreceive"), i18n( "Block" ), this );
+            connect( m_blockAction, SIGNAL(triggered(bool)), this, SLOT(slotBlock()) );
+        }
+        m_blockAction->setEnabled(true);
+        actions->append( m_blockAction );
+    }
+    if(!m_profileAction)
+    {
+        m_profileAction = new KAction( KIcon("document-preview"), i18n( "&View Webqq Profile" ), this );
+        connect( m_profileAction, SIGNAL(triggered(bool)), this, SLOT(slotUserInfo()) );
+    }
+    m_profileAction->setEnabled( true );
+    actions->append( m_profileAction );
+    // temporary action collection, used to apply Kiosk policy to the actions
+    KActionCollection tempCollection((QObject*)0);
+    tempCollection.addAction(QLatin1String("contactViewBlock"), m_blockAction);
+    tempCollection.addAction(QLatin1String("contactViewProfile"), m_profileAction);
+    return actions;
+}
 
-	return m_actionCollection;*/
-	return 0L;
+void WebqqContact::slotBlock()
+{
+    emit blockSignal(m_userId);
 }
 
 void WebqqContact::showContactSettings()
