@@ -416,6 +416,7 @@ bool WebqqAccount::createChatSessionContact(const QString &id, const QString &na
 {
     Kopete::MetaContact *m = new Kopete::MetaContact;
     m->setTemporary( true );
+    m->setDisplayName(name);
     if(!contact(id))
     {
         // FIXME: New Contacts are NOT added to KABC, because:
@@ -1297,7 +1298,6 @@ void WebqqAccount::group_come(LwqqClient* lc,LwqqGroup* group)
     QList<Kopete::Group*> groupList = Kopete::ContactList::self()->groups();
     Kopete::Group *g;
     Kopete::Group *targetGroup = NULL;
-    group->data = NULL;
     foreach(g, groupList)
     {
     if(g->displayName() == categoryName)
