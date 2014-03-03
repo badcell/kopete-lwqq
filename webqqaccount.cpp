@@ -53,7 +53,7 @@
 #include <QImage>
 #include <QBuffer>
 #include <QFile>
-
+#include <QList>
 // Kopete
 #include <kopetegroup.h>
 //#include "kopetedeletecontacttask.h"
@@ -507,10 +507,10 @@ void WebqqAccount::group_message(LwqqClient *lc, LwqqMsgMessage *msg)
     QString sendId;
     if(group == NULL) return;
 
-//    if(LIST_EMPTY(&group->members))
-//    {
-//        receivedGroupMessage(group, msg);
-//    }else{
+    if(LIST_EMPTY(&group->members))
+    {
+        receivedGroupMessage(group, msg);
+    }else{
 
         //force open dialog
         static char buf[BUFLEN] ;
@@ -561,7 +561,7 @@ void WebqqAccount::group_message(LwqqClient *lc, LwqqMsgMessage *msg)
         kmsg.setDirection( Kopete::Message::Inbound );
         chatContact->setContactType(Contact_Group);
         chatContact->manager(Kopete::Contact::CanCreate)->appendMessage(kmsg);
-   // }
+    }
 }
 
 void WebqqAccount::receivedGroupMessage(LwqqGroup *group, LwqqMsgMessage *msg)
@@ -573,34 +573,39 @@ void WebqqAccount::receivedGroupMessage(LwqqGroup *group, LwqqMsgMessage *msg)
         ev = lwqq_info_get_group_detail_info(m_lc,group,NULL);
         lwqq_async_add_event_listener(ev,_C_(3p,cb_rewrite_whole_message_list,ev,ac,group));
     }
-    group_msg_list *gml_ = group->data;
-    gml_->msg_list = g_list_append(gml_->msg_list, msg);
-    gml_->unread_num++;
+    char buf[BUFLEN] ;
+    strcpy(buf,"");
+    translate_struct_to_message(ac,msg,buf);
+    group_msg *message = s_malloc0(sizeof(group_msg));
+    message->send_id = s_strdup(msg->group.send);
+    message->when = msg->time;
+    message->what = s_strdup(buf);
+    QString id = QString(group->type == LwqqGroup::LWQQ_GROUP_QUN?group->gid:group->did);
+    MsgDataList msgList = m_msgMap[id];
+    msgList.append(*message);
+    m_msgMap.insert(id, msgList);
+
 }
 
 void WebqqAccount::ac_rewrite_whole_message_list(LwqqAsyncEvent *ev, qq_account *ac, LwqqGroup *group)
 {
     qDebug()<<"ac_rewrite_whole_message_list";
     if(lwqq_async_event_get_code(ev)==LWQQ_CALLBACK_FAILED) return;
-    group_msg_list *gmsg = group->data;
     ac_group_members(m_lc, group);
-    GList* list = gmsg->msg_list;
-    LwqqMsgMessage *message;
+    group_msg *message;
     Kopete::ContactPtrList justMe;
     LwqqBuddy* buddy;
     QString sendId;
-    while(list){
-        char buf[BUFLEN] ;
-        strcpy(buf,"");
-        message = list->data;
+    QString id = QString(group->type == LwqqGroup::LWQQ_GROUP_QUN?group->gid:group->did);
+    MsgDataList msgList = m_msgMap[id];
+    for(int i = 0; i < msgList.size(); i++)
+    {
+        message = &msgList.at(i);
         if(message == NULL)
         {
             qDebug()<<"null";
             return;
         }
-        fprintf(stderr, "data:%p, num:%d\n", *message, gmsg->unread_num);
-        translate_struct_to_message(ac,message,buf);
-        qDebug()<<"translate_struct_to_message";
         /*find the contact*/
         QString id;
         if(group->type == LwqqGroup::LWQQ_GROUP_QUN)
@@ -611,16 +616,16 @@ void WebqqAccount::ac_rewrite_whole_message_list(LwqqAsyncEvent *ev, qq_account 
         if ( !chatContact)
             return;
         justMe.append(myself());
-        QString sendMsg = stransMsg(QString::fromUtf8(buf));
-        if((buddy = find_buddy_by_uin(m_lc,message->group.send)))
+        QString sendMsg = stransMsg(QString::fromUtf8(message->what));
+        if((buddy = find_buddy_by_uin(m_lc,message->send_id)))
         {
             if(buddy->qqnumber)
                 sendId = QString(buddy->qqnumber);
             else
-                sendId = QString(message->group.send);
+                sendId = QString(message->send_id);
         }
         QDateTime msgDT;
-        msgDT.setTime_t(message->time);
+        msgDT.setTime_t(message->when);
         Kopete::Message kmsg( contact(sendId), justMe );
         kDebug(WEBQQ_GEN_DEBUG)<<"group message:"<<sendMsg;
         kmsg.setTimestamp( msgDT );
@@ -628,11 +633,8 @@ void WebqqAccount::ac_rewrite_whole_message_list(LwqqAsyncEvent *ev, qq_account 
         kmsg.setDirection( Kopete::Message::Inbound );
         chatContact->setContactType(Contact_Group);
         chatContact->manager(Kopete::Contact::CanCreate)->appendMessage(kmsg);
-        list = list->next;
     }
-    g_list_free(list);
-    gmsg->msg_list = NULL;
-    gmsg->unread_num = 0;
+    m_msgMap[id].clear();
 }
 
 void WebqqAccount::whisper_message(LwqqClient *lc, LwqqMsgMessage *mmsg)
@@ -861,28 +863,36 @@ void WebqqAccount::ac_group_members(LwqqClient *lc, LwqqGroup *group)
             if(strcmp(lc->myself->uin, member->uin) != 0)
             {
                 if((buddy = find_buddy_by_uin(lc,member->uin))) {
-                    if( !contact(QString(buddy->qqnumber)))
+                    if(contact(QString(buddy->qqnumber)))
+                    {
+                         contact(QString((group->type == LwqqGroup::LWQQ_GROUP_QUN? group->gid:group->did)))->webqq_addcontacts(contact(QString(buddy->qqnumber)));
+                    }else if(contact(QString(buddy->uin)))
+                    {
+                        contact(QString((group->type == LwqqGroup::LWQQ_GROUP_QUN? group->gid:group->did)))->webqq_addcontacts(contact(QString(buddy->uin)));
+                    }else
                     {
                         if(buddy->qqnumber)
                         {
-                        if( !createChatSessionContact( QString(buddy->qqnumber)  , contactName))
-                            return;
-                        contact(QString(buddy->qqnumber))->setContactType(Contact_Session);
-                        contact(QString(buddy->qqnumber))->set_session_info(QString((group->type == LwqqGroup::LWQQ_GROUP_QUN? group->gid:group->did)), \
-                                                                            QString::fromUtf8(group->name));
-                        contact(QString((group->type == LwqqGroup::LWQQ_GROUP_QUN? group->gid:group->did)))->webqq_addcontacts(contact(QString(buddy->qqnumber)));
+                            if( createChatSessionContact( QString(buddy->qqnumber)  , contactName))
+                            {
+                                contact(QString(buddy->qqnumber))->setContactType(Contact_Session);
+                                contact(QString(buddy->qqnumber))->set_session_info(QString((group->type == LwqqGroup::LWQQ_GROUP_QUN? group->gid:group->did)), \
+                                                                                    QString::fromUtf8(group->name));
+                                contact(QString((group->type == LwqqGroup::LWQQ_GROUP_QUN? group->gid:group->did)))->webqq_addcontacts(contact(QString(buddy->qqnumber)));
+                            }
                         }else
                         {
-                            if( !createChatSessionContact( QString(buddy->uin)  , contactName))
-                                return;
-                            contact(QString(buddy->uin))->setContactType(Contact_Session);
-                            contact(QString(buddy->uin))->set_session_info(QString((group->type == LwqqGroup::LWQQ_GROUP_QUN? group->gid:group->did)), \
-                                                                                QString::fromUtf8(group->name));
-                            contact(QString((group->type == LwqqGroup::LWQQ_GROUP_QUN? group->gid:group->did)))->webqq_addcontacts(contact(QString(buddy->uin)));
+                            if( createChatSessionContact( QString(buddy->uin)  , contactName))
+                            {
+                                contact(QString(buddy->uin))->setContactType(Contact_Session);
+                                contact(QString(buddy->uin))->set_session_info(QString((group->type == LwqqGroup::LWQQ_GROUP_QUN? group->gid:group->did)), \
+                                                                               QString::fromUtf8(group->name));
+                                contact(QString((group->type == LwqqGroup::LWQQ_GROUP_QUN? group->gid:group->did)))->webqq_addcontacts(contact(QString(buddy->uin)));
+                            }
                         }
-                    }else
-                        contact(QString((group->type == LwqqGroup::LWQQ_GROUP_QUN? group->gid:group->did)))->webqq_addcontacts(contact(QString(buddy->qqnumber)));
+                    }
                 }else{
+                    qDebug()<<"not find uin";
                     LwqqBuddy* buddy = lwqq_buddy_new();
                     buddy->qqnumber = member->qq;
                     buddy->nick = member->nick;
@@ -890,18 +900,20 @@ void WebqqAccount::ac_group_members(LwqqClient *lc, LwqqGroup *group)
                     if(member->qq)
                     {
                         qDebug()<<"qq:"<<QString(member->qq) ;
-                        if( !createChatSessionContact( QString(member->qq)  ,contactName ))
-                            return;
-                        contact(QString(member->qq) )->setContactType(Contact_Session);
-                        contact(QString(member->qq) )->set_session_info(QString((group->type == LwqqGroup::LWQQ_GROUP_QUN? group->gid:group->did)), QString::fromUtf8(group->name));
-                        contact(QString((group->type == LwqqGroup::LWQQ_GROUP_QUN? group->gid:group->did)))->webqq_addcontacts(contact(QString(member->qq)));
+                        if(createChatSessionContact( QString(member->qq)  ,contactName ))
+                        {
+                            contact(QString(member->qq) )->setContactType(Contact_Session);
+                            contact(QString(member->qq) )->set_session_info(QString((group->type == LwqqGroup::LWQQ_GROUP_QUN? group->gid:group->did)), QString::fromUtf8(group->name));
+                            contact(QString((group->type == LwqqGroup::LWQQ_GROUP_QUN? group->gid:group->did)))->webqq_addcontacts(contact(QString(member->qq)));
+                        }
                     }else if(member->uin)
                     {
-                        if( !createChatSessionContact( QString(member->uin)  ,contactName ))
-                            return;
-                        contact(QString(member->uin) )->setContactType(Contact_Session);
-                        contact(QString(member->uin) )->set_session_info(QString((group->type == LwqqGroup::LWQQ_GROUP_QUN? group->gid:group->did)), QString::fromUtf8(group->name));
-                        contact(QString((group->type == LwqqGroup::LWQQ_GROUP_QUN? group->gid:group->did)))->webqq_addcontacts(contact(QString(member->uin)));
+                        if( createChatSessionContact( QString(member->uin)  ,contactName ))
+                        {
+                            contact(QString(member->uin) )->setContactType(Contact_Session);
+                            contact(QString(member->uin) )->set_session_info(QString((group->type == LwqqGroup::LWQQ_GROUP_QUN? group->gid:group->did)), QString::fromUtf8(group->name));
+                            contact(QString((group->type == LwqqGroup::LWQQ_GROUP_QUN? group->gid:group->did)))->webqq_addcontacts(contact(QString(member->uin)));
+                        }
                     }
                     LIST_INSERT_HEAD(&m_lc->friends,buddy,entries);
                     lwdb_userdb_insert_buddy_info(((qq_account*)(m_lc->data))->db, buddy);
@@ -1269,16 +1281,23 @@ void WebqqAccount::group_come(LwqqClient* lc,LwqqGroup* group)
   //printf("group info:\t\t type: %d\t\t name: %s\t\t markname: %s\n", group->type, group->name, group->markname);
 
     QString categoryName;
+    MsgDataList msgList;
+    msgList.clear();
     if(group->type == LwqqGroup::LWQQ_GROUP_QUN)
+    {
         categoryName = QString("Group");
+        m_msgMap.insert(QString(group->gid), msgList);
+    }
     else
+    {
         categoryName = QString("Discussion");
+        m_msgMap.insert(QString(group->did), msgList);
+    }
 
-    group->data = s_malloc0(sizeof(group_msg_list));
     QList<Kopete::Group*> groupList = Kopete::ContactList::self()->groups();
     Kopete::Group *g;
     Kopete::Group *targetGroup = NULL;
-
+    group->data = NULL;
     foreach(g, groupList)
     {
     if(g->displayName() == categoryName)

@@ -21,7 +21,8 @@
 //#include <kopeteaccount.h>
 #include <kopetepasswordedaccount.h>
 #include "webqqwebcamdialog.h"
-
+#include <QMap>
+#include <QList>
 #include "webqqbridgecallback.h"
 /*include the header of lwqq*/
 extern "C"
@@ -44,7 +45,7 @@ namespace Kopete
 class WebqqProtocol;
 class QByteArray;
 class WebqqContact;
-
+typedef QList<group_msg> MsgDataList;
 /**
  * This represents an account connected to the webqq
  * @author Will Stephenson
@@ -213,6 +214,7 @@ private:
     QTimer *pollTimer;
     QByteArray avatarData;
     add_info *m_addInfo;
+    QMap<QString, MsgDataList> m_msgMap;
     /*called by login stage1*/
     //void login_stage_2(LwqqAsyncEvent* ev,LwqqClient* lc);
 };

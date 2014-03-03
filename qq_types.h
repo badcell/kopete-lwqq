@@ -58,9 +58,10 @@ typedef struct {
 }index_node;
 
 typedef struct {
-    GList* msg_list;
-    unsigned int unread_num;
-}group_msg_list;
+    char *send_id;
+    time_t when;
+    char *what;
+}group_msg;
 
 typedef enum 
 {
