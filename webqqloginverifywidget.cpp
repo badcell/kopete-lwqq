@@ -34,7 +34,10 @@ void LoginVerifyDialog::onButtonClicked()
 }
 void LoginVerifyDialog::setImage(QString fullPath)
 {
-    m_picLabel->setPixmap(QPixmap(fullPath)); 
+    QMovie *movie = new QMovie(fullPath);
+    m_picLabel->setMovie(movie);
+    movie->start();
+    m_picLabel->show();
 }
 
 QString LoginVerifyDialog::getVerifyString()

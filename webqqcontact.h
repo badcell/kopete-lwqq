@@ -97,6 +97,10 @@ public:
     void set_session_info(const QString &gid, const QString &name);
     void clean_contact();
     static QString prepareMessage(const QString &messageText , const QString &plainText);
+    void set_group_name(const QString &name);
+    void set_group_status(bool status){
+        m_isSetGroupInfo = status;
+    }
 
 public slots:
 	/**
@@ -134,6 +138,7 @@ protected:
     WebqqDiscuChatSession* m_discuManager;
     Kopete::ContactPtrList m_groupMebers;
     bool m_isGroupDestory;
+    bool m_isSetGroupInfo;
 	KActionCollection* m_actionCollection;
 	Type m_type;
 	KAction* m_actionPrefs;

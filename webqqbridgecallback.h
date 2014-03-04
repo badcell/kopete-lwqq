@@ -22,6 +22,7 @@ typedef enum  {
   SHOW_MESSAGE,
   FRIEND_COME,
   REWRITE_MSG,
+  SET_GROUPNAME,
   
 }CallbackFunctionType;
 

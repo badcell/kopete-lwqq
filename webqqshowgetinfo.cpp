@@ -59,10 +59,7 @@ void ShowGetInfoDialog::setRequired(QString info)
 {
     m_okButton->setText(i18n("OK"));
     m_cancelButton->setText(i18n("Ignore"));
-    m_showLabel->setText(i18n("Friends confirm"));
-    QLabel *refuseLabel = new QLabel(i18n("Grounds for refusal"));
     QGroupBox *groupBox = new QGroupBox(i18n("Please select"));
-    m_infoEdit->setText(info);
     m_refuseButton->setChecked(true);
     QVBoxLayout *vbox = new QVBoxLayout;
     vbox->addWidget(m_refuseButton);
@@ -71,13 +68,29 @@ void ShowGetInfoDialog::setRequired(QString info)
     vbox->addStretch(1);
     groupBox->setLayout(vbox);
     QGridLayout* pGridLayout = new QGridLayout();
-    pGridLayout->addWidget(m_showLabel, 1, 1, 1, 2);
-    pGridLayout->addWidget(m_infoEdit, 2, 1, 4, 3);
-    pGridLayout->addWidget(groupBox, 6, 1, 3, 3);
-    pGridLayout->addWidget(refuseLabel, 9, 1, 1, 1);
-    pGridLayout->addWidget(m_inputverififyEdit, 9, 2, 1, 2);
-    pGridLayout->addWidget(m_cancelButton, 10, 1, 1, 1);
-    pGridLayout->addWidget(m_okButton, 10, 2, 1, 1);
+    if(info.isEmpty())
+    {
+        setWindowTitle(i18n("Block Message"));
+        m_refuseButton->setText(i18n("No Block"));
+        m_agreeButton->setText(i18n("Slience Receive"));
+        m_agreeAddButton->setText(i18n("Block"));
+        pGridLayout->addWidget(groupBox, 1, 1, 3, 3);
+        pGridLayout->addWidget(m_cancelButton, 9, 1, 1,1);
+        pGridLayout->addWidget(m_okButton, 9, 2, 1, 1);
+    }else
+    {
+        setWindowTitle(i18n("Friends confirm"));
+        m_showLabel->setText(i18n("Friends confirm"));
+        QLabel *refuseLabel = new QLabel(i18n("Grounds for refusal"));
+        m_infoEdit->setText(info);
+        pGridLayout->addWidget(m_showLabel, 1, 1, 1, 2);
+        pGridLayout->addWidget(m_infoEdit, 2, 1, 4, 3);
+        pGridLayout->addWidget(groupBox, 6, 1, 3, 3);
+        pGridLayout->addWidget(refuseLabel, 9, 1, 1, 1);
+        pGridLayout->addWidget(m_inputverififyEdit, 9, 2, 1, 2);
+        pGridLayout->addWidget(m_cancelButton, 10, 1, 1, 1);
+        pGridLayout->addWidget(m_okButton, 10, 2, 1, 1);
+    }
     setLayout(pGridLayout);
     resize(300, 400);
 }

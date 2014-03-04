@@ -131,10 +131,11 @@ public slots:
     void ac_show_messageBox(msg_type type, const char *title, const char *message );
     void ac_friend_come(LwqqClient* lc,LwqqBuddy* b);
     void ac_rewrite_whole_message_list(LwqqAsyncEvent* ev,qq_account* ac,LwqqGroup* group);
+    void ac_qq_set_group_name(LwqqGroup* group);
 	void slotReceivedInstanceSignal(CallbackObject cb);
     void blist_change(LwqqClient* lc,LwqqMsgBlistChange* blist);
 	void pollMessage();
-	void afterLogin();
+    void afterLogin(LwqqClient* lc);
     /**
      * get group or disu all members
      */
@@ -201,6 +202,8 @@ private:
 
     void receivedGroupMessage(LwqqGroup* group, LwqqMsgMessage *msg);
 
+    bool group_is_qun(LwqqGroup *group);
+    void rewrite_group_msg(const QString &id);
     QString stransMsg(const QString &message);
 
     QString m_username;
@@ -238,6 +241,8 @@ static void cb_delete_group_local(LwqqClient* lc, const LwqqGroup **g);
 static void cb_flush_group_members(LwqqClient* lc, LwqqGroup **g);
 static void cb_return_friend_come(LwqqClient* lc,LwqqBuddy* b);
 static void cb_rewrite_whole_message_list(LwqqAsyncEvent* ev,qq_account* ac,LwqqGroup* group);
+static void cb_qq_set_group_name(LwqqGroup* group);
+static void set_cgroup_block(LwqqConfirmTable* ct,LwqqClient* lc,LwqqGroup* g);
 static void confirm_table_yes(LwqqConfirmTable* table, const char *input, LwqqAnswer answer);
 static void confirm_table_no(LwqqConfirmTable* table,const char *input);
 static void system_message(LwqqClient* lc,LwqqMsgSystem* system,LwqqBuddy* buddy);

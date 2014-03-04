@@ -62,7 +62,10 @@ WebqqContact::WebqqContact( Kopete::Account* _account, const QString &uniqueName
     m_chatManager = 0L;
     m_groupManager = 0L;
     m_discuManager = 0L;
+    m_profileAction = 0L;
+    m_blockAction = 0L;
     m_isGroupDestory = false;
+    m_isSetGroupInfo = false;
     m_account = _account;
 	setOnlineStatus( WebqqProtocol::protocol()->WebqqOffline );
 }
@@ -124,9 +127,9 @@ Kopete::ChatSession* WebqqContact::manager( CanCreateFlags canCreateFlags )
         {
             return 0;
         }
-    }else if(m_contactType == Contact_Group)
+    }else if(m_contactType == Contact_Group || m_contactType == Contact_Discu)
     {
-        qDebug()<<"group manager";
+        //qDebug()<<"group manager";
         if ( m_groupManager )
         {
             return m_groupManager;
@@ -145,17 +148,19 @@ Kopete::ChatSession* WebqqContact::manager( CanCreateFlags canCreateFlags )
                 }
             }
             m_groupManager->setTopic(m_displayName);
+            if(!m_isSetGroupInfo)
+                emit getGroupMembersSignal(m_userId);
             connect(m_groupManager, SIGNAL(messageSent(Kopete::Message&,Kopete::ChatSession*)),
                     this, SLOT(sendMessage(Kopete::Message&)) );
             connect(m_groupManager, SIGNAL(destroyed()), this, SLOT(slotChatSessionDestroyed()));
-            emit getGroupMembersSignal(m_userId);
+
             return m_groupManager;
         }
         else
         {
             return 0;
         }
-    }else if(m_contactType == Contact_Discu)
+    }/*else if(m_contactType == Contact_Discu)
     {
         if ( m_discuManager )
         {
@@ -175,7 +180,7 @@ Kopete::ChatSession* WebqqContact::manager( CanCreateFlags canCreateFlags )
         {
             return 0;
         }
-    }
+    }*/
 }
 
 void WebqqContact::webqq_addcontacts(Kopete::Contact *others)
@@ -188,6 +193,7 @@ void WebqqContact::webqq_addcontacts(Kopete::Contact *others)
 QList<KAction *> *WebqqContact::customContextMenuActions() //OBSOLETE
 {	
     QList<KAction*> *actions = new QList<KAction*>();
+    KActionCollection tempCollection((QObject*)0);
     if(m_contactType == Contact_Group)
     {
         if(!m_blockAction)
@@ -197,6 +203,7 @@ QList<KAction *> *WebqqContact::customContextMenuActions() //OBSOLETE
         }
         m_blockAction->setEnabled(true);
         actions->append( m_blockAction );
+         tempCollection.addAction(QLatin1String("contactViewBlock"), m_blockAction);
     }
     if(!m_profileAction)
     {
@@ -205,9 +212,7 @@ QList<KAction *> *WebqqContact::customContextMenuActions() //OBSOLETE
     }
     m_profileAction->setEnabled( true );
     actions->append( m_profileAction );
-    // temporary action collection, used to apply Kiosk policy to the actions
-    KActionCollection tempCollection((QObject*)0);
-    tempCollection.addAction(QLatin1String("contactViewBlock"), m_blockAction);
+    // temporary action collection, used to apply Kiosk policy to the actions  
     tempCollection.addAction(QLatin1String("contactViewProfile"), m_profileAction);
     return actions;
 }
@@ -420,6 +425,13 @@ void WebqqContact::set_session_info(const QString &gid, const QString &name)
 {
     m_sessionId = gid;
     m_sessionName = name;
+}
+
+void WebqqContact::set_group_name(const QString &name)
+{
+    m_displayName = name;
+    if(m_groupManager)
+        m_groupManager->setTopic(name);
 }
 
 static void cb_send_receipt(LwqqAsyncEvent* ev,LwqqMsg* msg,char* serv_id,char* what)
