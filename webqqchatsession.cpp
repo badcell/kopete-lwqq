@@ -82,7 +82,7 @@ WebqqChatSession::WebqqChatSession( Kopete::Protocol *protocol, const Kopete::Co
 //		m_image = 0L;
 //	}
 
-   // setXMLFile("webqqchatui.rc");
+    setXMLFile("webqqchatui.rc");
 }
 
 WebqqChatSession::~WebqqChatSession()

@@ -631,7 +631,7 @@ int qq_send_im( LwqqClient* lc, const char *who, const char *what, ConType type)
     mmsg->f_style = ac->font.style;
     strcpy(mmsg->f_color,"000000");
     fprintf(stderr, "msg:%s\n", what);
-    translate_message_to_struct(NULL, NULL, what, msg, 0);
+    translate_message_to_struct(NULL, NULL, what, msg, 1);
 
     LwqqAsyncEvent* ev = lwqq_msg_send(lc,mmsg);
     lwqq_async_add_event_listener(ev,_C_(4p, cb_send_receipt,ev,msg,strdup(who),strdup(what)));

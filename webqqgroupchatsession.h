@@ -40,6 +40,8 @@ public:
 	void setTopic( const QString & topic );	
 
 	void removeAllContacts();
+private slots:
+    void slotimageContact();
 signals:
     void leavingChat( WebqqGroupChatSession *s );
 private:

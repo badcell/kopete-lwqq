@@ -312,10 +312,20 @@ static size_t img_filebuffer(const char *file, char *buffer)
     int fd;
     if((fd = open(file, O_RDONLY)))
     {
-        fprintf(stderr, "read\n");
-        int size = read(fd, buffer, img_filesize(file));
+
+        int readSize = 0;
+        int size = 0;
+        char *buf[1024];
+        bzero(buf, sizeof(buf));
+        while ((size = read(fd, buf, sizeof(buf))) > 0) {
+
+            memcpy(buffer+readSize, buf, size);
+            readSize += size;
+            bzero(buf, sizeof(buf));
+        }
+        //fprintf(stderr, "readsize:%d, totle:%d\n", readSize, img_filesize(file));
         close(fd);
-        return size;
+        return readSize;
     }else
     {
         fprintf(stderr,"open file failed\n");
@@ -328,7 +338,7 @@ static size_t img_filebuffer(const char *file, char *buffer)
 int translate_message_to_struct(LwqqClient* lc,const char* to,const char* what,LwqqMsg* msg,int using_cface)
 {
     const char* ptr = what;
-    int img_id;
+    static int img_id = 1;
     LwqqMsgContent *c;
     const char* begin,*end;
     TRexMatch m;
@@ -360,10 +370,8 @@ int translate_message_to_struct(LwqqClient* lc,const char* to,const char* what,L
             //process ing img.
             //sscanf(begin,"<img src=\"%s\"/>",fileName);
             sscanf(begin, "%*[^\"]\"%[^\"]", fileName);
-            fprintf(stderr, "img send:%s\n", fileName);
-            char *imgBuffer = (char *)malloc(img_filesize(fileName));
+            char *imgBuffer = (char *)s_malloc(img_filesize(fileName));
             img_filebuffer(fileName, imgBuffer);
-            fprintf(stderr, "filesize:%d, data:%s name:%s\n", img_filesize(fileName), imgBuffer, img_fileName(fileName));
             if(using_cface||msg->type == LWQQ_MS_GROUP_MSG){
                 c = s_malloc0(sizeof(*c));
                 c->type = LWQQ_CONTENT_CFACE;
@@ -371,10 +379,10 @@ int translate_message_to_struct(LwqqClient* lc,const char* to,const char* what,L
                 c->data.cface.data = s_malloc(img_filesize(fileName));
                 memcpy(c->data.cface.data, imgBuffer,img_filesize(fileName));
                 c->data.cface.size = img_filesize(fileName);
-//                c = lwqq_msg_fill_upload_cface(
-//                        img_fileName(fileName),
-//                        img_filebuffer(fileName),
-//                        img_filesize(fileName));
+                char buf[12];
+                snprintf(buf,sizeof(buf),"%d",img_id++);
+                //record extra information to file_id
+                c->data.cface.file_id = s_strdup(buf);
             }else{
                 c = s_malloc0(sizeof(*c));
                 c->type = LWQQ_CONTENT_OFFPIC;

@@ -20,7 +20,7 @@
 #include <klocale.h>
 #include <kcomponentdata.h>
 #include <kaction.h>
-
+#include <QFileDialog>
 #include <kopetecontactlist.h>
 #include <kopetecontact.h>
 #include <kopetechatsessionmanager.h>
@@ -38,25 +38,37 @@ WebqqGroupChatSession::WebqqGroupChatSession( Kopete::Protocol *protocol, const 
 {
 	Kopete::ChatSessionManager::self()->registerChatSession( this );
 	setComponentData(protocol->componentData());
-//    KAction *buzzAction = new KAction( KIcon("bell"), i18n( "Buzz Contact" ), this );
-//        actionCollection()->addAction( "WebqqBuzz", buzzAction );
-//    //buzzAction->setShortcut( KShortcut("Ctrl+G") );
-//    //connect( buzzAction, SIGNAL(triggered(bool)), this, SLOT(slotBuzzContact()) );
+    KAction *buzzAction = new KAction( KIcon("bell"), i18n( "Buzz Contact" ), this );
+        actionCollection()->addAction( "WebqqBuzz", buzzAction );
+    //buzzAction->setShortcut( KShortcut("Ctrl+G") );
+    //connect( buzzAction, SIGNAL(triggered(bool)), this, SLOT(slotBuzzContact()) );
 
-//    KAction *imageAction = new KAction( KIcon("image"), i18n( "Image send" ), this );
-//        actionCollection()->addAction( "Webqqimage", imageAction );
-//    //buzzAction->setShortcut( KShortcut("Ctrl+G") );
-//    //connect( imageAction, SIGNAL(triggered(bool)), this, SLOT(slotimageContact()) );
+    KAction *imageAction = new KAction( KIcon("image"), i18n( "Image send" ), this );
+        actionCollection()->addAction( "Webqqimage", imageAction );
+    //buzzAction->setShortcut( KShortcut("Ctrl+G") );
+    connect( imageAction, SIGNAL(triggered(bool)), this, SLOT(slotimageContact()) );
 
-//    KAction *userInfoAction = new KAction( KIcon("help-about"), i18n( "Show User Info" ), this );
-//        actionCollection()->addAction( "WebqqShowInfo",  userInfoAction) ;
-    //connect( userInfoAction, SIGNAL(triggered(bool)), this, SLOT(slotUserInfo()) );
-    //setXMLFile("webqqgroupui.rc");
+    KAction *userInfoAction = new KAction( KIcon("help-about"), i18n( "Show User Info" ), this );
+        actionCollection()->addAction( "WebqqShowInfo",  userInfoAction) ;
+    connect( userInfoAction, SIGNAL(triggered(bool)), this, SLOT(slotUserInfo()) );
+    setXMLFile("webqqgroupui.rc");
 }
 
 WebqqGroupChatSession::~WebqqGroupChatSession()
 {
     //emit leavingChat( this );
+}
+
+void WebqqGroupChatSession::slotimageContact()
+{
+    QString fileName = QFileDialog::getOpenFileName(NULL, tr("Open File"),
+                                                     "/home",
+                                                     tr("Images (*.png *.xpm *.jpg *.gif *.bmp *jpeg)"));
+    if(!fileName.isNull())
+    {
+        QList<Kopete::Contact*>contacts = members();
+        static_cast<WebqqContact *>(contacts.first())->imageContact(fileName);
+    }
 }
 
 void WebqqGroupChatSession::removeAllContacts()

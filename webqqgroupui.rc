@@ -3,11 +3,13 @@
 	<MenuBar>
             <Menu noMerge="1" name="file">
                 <Action name="WebqqBuzz" />
+                <Action name="Webqqimage" />
                 <Action name="WebqqShowInfo" />
             </Menu>
 	</MenuBar>
 	<ToolBar name="statusToolBar">	
             <Action name="WebqqBuzz" />
+            <Action name="Webqqimage" />
             <Action name="WebqqShowInfo" />
 	</ToolBar>
 </kpartgui>
