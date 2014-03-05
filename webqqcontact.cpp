@@ -690,7 +690,10 @@ void WebqqContact::receivedMessage( const QString &message )
 
 void WebqqContact::set_group_members()
 {
-    m_groupMebers = m_groupManager->members();
+    if(m_groupManager)
+        m_groupMebers = m_groupManager->members();
+    else
+        m_groupMebers = manager(CanCreate)->members();
 }
 
 void WebqqContact::slotChatSessionDestroyed()

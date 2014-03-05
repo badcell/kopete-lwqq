@@ -955,6 +955,7 @@ void WebqqAccount::ac_group_members(LwqqClient *lc, LwqqGroup *group)
     LwqqBuddy* buddy;
     QString g_id = QString((group->type == LwqqGroup::LWQQ_GROUP_QUN? group->gid:group->did));
     contact(g_id)->set_group_status(true);
+    contact(g_id)->setContactType(Contact_Group);
     if(group->type == LwqqGroup::LWQQ_GROUP_DISCU || group->type == LwqqGroup::LWQQ_GROUP_QUN)
     {
         LIST_FOREACH(member,&group->members,entries)
@@ -1466,10 +1467,6 @@ void WebqqAccount::group_come(LwqqClient* lc,LwqqGroup* group)
         lwqq_async_evset_add_event(set,ev);
         lwqq_async_add_evset_listener(set,_C_(2p,cb_group_avatar, lc, group));
 
-//        ev = lwqq_info_get_group_detail_info(lc, group, NULL);/*get detail of friend*/
-//        lwqq_async_evset_add_event(set,ev);
-//        lwqq_async_add_evset_listener(set,_C_(2p,cb_group_members, lc, group));
-        //lwqq_async_add_event_listener(ev,_C_(2p,cb_friend_avatar, lc, buddy));
     }
     if(group->type == LwqqGroup::LWQQ_GROUP_QUN)
     {
@@ -1518,7 +1515,7 @@ void WebqqAccount::ac_login_stage_3(LwqqClient* lc)
 
   qq_account* ac = lwqq_client_userdata(lc);
 
-    LwqqAsyncEvent* ev = NULL;
+
 
     lwdb_userdb_flush_buddies(ac->db, 5,5);
     lwdb_userdb_flush_groups(ac->db, 1,10);
@@ -1528,9 +1525,9 @@ void WebqqAccount::ac_login_stage_3(LwqqClient* lc)
     }
     myself ()->setProperty (Kopete::Global::Properties::self ()->nickName (),
                             QString::fromUtf8(lc->myself->nick));
-    ev=lwqq_info_get_friend_avatar(lc,lc->myself);
-    lwqq_async_add_event_listener(ev,_C_(2p,cb_friend_avatar,ac,lc->myself));
-
+    LwqqAsyncEvent* lwev=lwqq_info_get_friend_avatar(lc,lc->myself);
+    lwqq_async_add_event_listener(lwev,_C_(2p,cb_friend_avatar,ac,lc->myself));
+    LwqqAsyncEvent* ev = NULL;
     LwqqAsyncEvset* set = lwqq_async_evset_new();
     LwqqBuddy* buddy;
     LIST_FOREACH(buddy,&lc->friends,entries) {
@@ -1597,6 +1594,7 @@ void WebqqAccount::ac_login_stage_3(LwqqClient* lc)
             discu_come(lc, discu);
         }
     }
+
     lwqq_async_add_evset_listener(set, _C_(p,cb_login_stage_f,lc));
 
     ac->state = LOAD_COMPLETED;

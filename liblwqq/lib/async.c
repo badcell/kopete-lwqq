@@ -172,6 +172,7 @@ void lwqq_async_evset_add_event(LwqqAsyncEvset* host,LwqqAsyncEvent *handle)
     pthread_mutex_lock(&internal->lock);
     ((LwqqAsyncEvent_*)handle)->host_lock = host;
     internal->ref_count++;
+    fprintf(stderr, "lwqq_async_evset_add_event count:%d\n", internal->ref_count);
     pthread_mutex_unlock(&internal->lock);
 }
 
@@ -218,14 +219,21 @@ void lwqq_async_add_event_chain(LwqqAsyncEvent* caller,LwqqAsyncEvent* called)
 }
 void lwqq_async_add_evset_listener(LwqqAsyncEvset* evset,LwqqCommand cmd)
 {
+    fprintf(stderr, "lwqqCommand:%p\n", &cmd);
     LwqqAsyncEvset_* _evset = (LwqqAsyncEvset_*)evset;
     if(evset == NULL){
         vp_cancel(cmd);
         return ;
     }else if(_evset->cmd.func== NULL)
+    {
         _evset->cmd = cmd;
+        fprintf(stderr, "func is NULL\n");
+    }
     else
+    {
+        fprintf(stderr, "evset:%p, next:%p\n", &_evset->cmd, &_evset->cmd.next);
         vp_link(&_evset->cmd,&cmd);
+    }
     if(_evset->ref_count == 0) lwqq_async_evset_free(evset);
 }
 
