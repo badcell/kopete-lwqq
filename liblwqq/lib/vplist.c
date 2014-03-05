@@ -1,6 +1,7 @@
 #include "vplist.h"
 #include <string.h>
-
+#include <stdlib.h>
+#include <stdio.h>
 struct vp_d_table{
     const char* id;
     VP_DISPATCH d;

@@ -1108,11 +1108,11 @@ void WebqqAccount::ac_need_verify2(LwqqClient* lc, LwqqVerifyCode* code)
 {
     printf("[%s] \n", __FUNCTION__);
     const char *dir = "/tmp/kopete-qq/";
-    char fname[50];
-    snprintf(fname,sizeof(fname),"%s.gif",lc->username);
-    lwqq_util_save_img(code->data,code->size,fname,dir);
+   // char fname[50];
+    //snprintf(fname,sizeof(fname),"%s.gif",lc->username);
+    lwqq_util_save_img(code->data,code->size,lc->username,dir);
     LoginVerifyDialog *dlg = new LoginVerifyDialog();
-    QString fullPath = QString(dir) + QString(fname);
+    QString fullPath = QString(dir) + QString(lc->username);
     dlg->setImage(fullPath);
     dlg->exec();
     QString input = dlg->getVerifyString();
@@ -1486,13 +1486,11 @@ void WebqqAccount::group_come(LwqqClient* lc,LwqqGroup* group)
 
 void WebqqAccount::slotGetGroupMembers(QString id)
 {
-    qDebug()<<"slotGetGroupMembers";
     LwqqGroup* group = find_group_by_gid(m_lc,id.toUtf8().constData());
     if(group == NULL)
         return;
     if(LIST_EMPTY(&group->members))
     {
-        qDebug()<<"slotGetGroupMembers empty";
         LwqqAsyncEvent* ev;
         LwqqAsyncEvset* set = lwqq_async_evset_new();
         ev = lwqq_info_get_group_detail_info(m_lc, group, NULL);/*get detail of friend*/
@@ -1527,12 +1525,12 @@ void WebqqAccount::ac_login_stage_3(LwqqClient* lc)
                             QString::fromUtf8(lc->myself->nick));
     LwqqAsyncEvent* lwev=lwqq_info_get_friend_avatar(lc,lc->myself);
     lwqq_async_add_event_listener(lwev,_C_(2p,cb_friend_avatar,ac,lc->myself));
+
     LwqqAsyncEvent* ev = NULL;
     LwqqAsyncEvset* set = lwqq_async_evset_new();
     LwqqBuddy* buddy;
     LIST_FOREACH(buddy,&lc->friends,entries) {
         lwdb_userdb_query_buddy(ac->db, buddy);
-        //if((ac->flag& 1 )&& ! buddy->qqnumber){ //QQ_USE_QQNUM =1
 	if(! buddy->qqnumber){
             ev = lwqq_info_get_friend_qqnumber(lc,buddy);
             lwqq_async_evset_add_event(set, ev);
@@ -1594,8 +1592,9 @@ void WebqqAccount::ac_login_stage_3(LwqqClient* lc)
             discu_come(lc, discu);
         }
     }
-
     lwqq_async_add_evset_listener(set, _C_(p,cb_login_stage_f,lc));
+
+
 
     ac->state = LOAD_COMPLETED;
     LwqqPollOption flags = POLL_AUTO_DOWN_DISCU_PIC|POLL_AUTO_DOWN_GROUP_PIC|POLL_AUTO_DOWN_BUDDY_PIC;
