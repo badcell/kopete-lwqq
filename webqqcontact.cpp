@@ -263,7 +263,6 @@ void WebqqContact::clean_contact()
 void WebqqContact::setDisplayPicture(const QByteArray &data)
 {
 	//setProperty( WebqqProtocol::protocol()->iconCheckSum, checksum );	
-    qDebug()<<"setDisplayPicture";
 	Kopete::AvatarManager::AvatarEntry entry;
 	entry.name = contactId();
 	entry.category = Kopete::AvatarManager::Contact;
