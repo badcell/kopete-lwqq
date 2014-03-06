@@ -32,14 +32,14 @@
 #define GIF_FIRSTBIT  "47"
 #define GIF_SECONDBIT "49"
 #define GIF_THIRDBIT  "46"
-#define GIF_FIFTHBIT1 "39"   // 可能存在是37
+#define GIF_FIFTHBIT1 "39"
 #define GIF_FIFTHBIT2 "37"
 
 /*---TIFF(5)---*/
 #define IMAGE_TIFF      "TIFF"
 #define TIFF_FIRSTBIT   "4D"
 #define TIFF_SECONDBIT  "4D"
-#define TIFF_FIRSTBIT2  "49"  // 或者
+#define TIFF_FIRSTBIT2  "49"
 #define TIFF_SECONDBIT2 "49"
 
 /*---ICO(6)---*/

@@ -20,6 +20,7 @@ include(CheckFunctionExists)
 include(CheckLibraryExists)
 include(CheckPrototypeExists)
 include(CheckTypeSize)
+add_definitions( -DKDE_DEFAULT_DEBUG_AREA=14210 )
 
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(LIBJS REQUIRED mozjs185)

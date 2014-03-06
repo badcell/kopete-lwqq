@@ -17,7 +17,6 @@
 
 
 #include <QList>
-#include <QDebug>
 #include <QFile>
 #include <sys/stat.h>
 #include <unistd.h>
@@ -129,7 +128,7 @@ Kopete::ChatSession* WebqqContact::manager( CanCreateFlags canCreateFlags )
         }
     }else if(m_contactType == Contact_Group || m_contactType == Contact_Discu)
     {
-        //qDebug()<<"group manager";
+        //kDebug(WEBQQ_GEN_DEBUG)()<<"group manager";
         if ( m_groupManager )
         {
             return m_groupManager;
