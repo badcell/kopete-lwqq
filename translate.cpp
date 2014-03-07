@@ -140,7 +140,7 @@ const char* HTML_SYMBOL = "<[^>]+>|&amp;|&quot;|&gt;|&lt;";
 #define sizeunmap(px) ((px-6)/2)
 static char* build_smiley_exp()
 {
-    char* exp = s_malloc0(2048);
+    char* exp = (char*)s_malloc0(2048);
     char* spec_char = "()[]*$\\|+";
     //<IMG ID=''> is belongs to <.*?>
     //first html label .then smiley
@@ -185,19 +185,19 @@ static LwqqMsgContent* build_string_content(const char* from,const char* to,Lwqq
     if(last && last->type == LWQQ_CONTENT_STRING){
         c = NULL;//return NULL
         size_t sz = strlen(last->data.str);
-        last->data.str = s_realloc(last->data.str,sz+to-from+3);
+        last->data.str = (char*)s_realloc(last->data.str,sz+to-from+3);
         read = write = last->data.str+sz;
     }else{
-        c = s_malloc0(sizeof(*c));
+        c = (LwqqMsgContent*)s_malloc0(sizeof(*c));
         c->type = LWQQ_CONTENT_STRING;
-        c->data.str = s_malloc0(to-from+3);
+        c->data.str = (char*)s_malloc0(to-from+3);
         read = write = c->data.str;
     }
     //initial value
     strncpy(write,from,to-from);
     write[to-from]='\0';
     const char *ptr;
-    fprintf(stderr, "bengin while\n");
+    //fprintf(stderr, "bengin while\n");
     while(*read!='\0'){
         if(!trex_search(hs_regex,read,&begin,&end)){
             ptr = strchr(read,'\0');
@@ -244,7 +244,7 @@ static LwqqMsgContent* build_string_content(const char* from,const char* to,Lwqq
                         msg->f_color[6] = '\0';
                     }else if(strncmp(key,"face",4)==0){
                         s_free(msg->f_name);
-                        msg->f_name = s_malloc0(end-value+1);
+                        msg->f_name =(char*) s_malloc0(end-value+1);
                         strncpy(msg->f_name,value,end-value);
                         msg->f_name[end-value]='\0';
                     }
@@ -253,7 +253,6 @@ static LwqqMsgContent* build_string_content(const char* from,const char* to,Lwqq
         }
         read = end;
     }
-    fprintf(stderr, "end while\n");
     *write = '\0';
     return c;
 }
@@ -285,7 +284,7 @@ static LwqqMsgContent* build_face_content(const char* face,int len)
 static LwqqMsgContent* build_face_direct(int num)
 {
     LwqqMsgContent* c;
-    c = s_malloc0(sizeof(*c));
+    c = (LwqqMsgContent*)s_malloc0(sizeof(*c));
     c->type = LWQQ_CONTENT_FACE;
     c->data.face = num;
     return c;
@@ -293,7 +292,7 @@ static LwqqMsgContent* build_face_direct(int num)
 
 static char *img_fileName(const char *file)
 {
-    fprintf(stderr, "fileName:%s\n", basename(file));
+    //fprintf(stderr, "fileName:%s\n", basename(file));
     return basename(file);
 }
 
@@ -328,7 +327,7 @@ static size_t img_filebuffer(const char *file, char *buffer)
         return readSize;
     }else
     {
-        fprintf(stderr,"open file failed\n");
+        //fprintf(stderr,"open file failed\n");
         return 0;
     }
 }
@@ -339,6 +338,7 @@ int translate_message_to_struct(LwqqClient* lc,const char* to,const char* what,L
 {
     const char* ptr = what;
     static int img_id = 1;
+    int face_id;
     LwqqMsgContent *c;
     const char* begin,*end;
     TRexMatch m;
@@ -373,10 +373,10 @@ int translate_message_to_struct(LwqqClient* lc,const char* to,const char* what,L
             char *imgBuffer = (char *)s_malloc(img_filesize(fileName));
             img_filebuffer(fileName, imgBuffer);
             if(using_cface||msg->type == LWQQ_MS_GROUP_MSG){
-                c = s_malloc0(sizeof(*c));
+                c =( LwqqMsgContent*)s_malloc0(sizeof(*c));
                 c->type = LWQQ_CONTENT_CFACE;
                 c->data.cface.name = s_strdup(img_fileName(fileName));
-                c->data.cface.data = s_malloc(img_filesize(fileName));
+                c->data.cface.data = (char*)s_malloc(img_filesize(fileName));
                 memcpy(c->data.cface.data, imgBuffer,img_filesize(fileName));
                 c->data.cface.size = img_filesize(fileName);
                 char buf[12];
@@ -384,10 +384,10 @@ int translate_message_to_struct(LwqqClient* lc,const char* to,const char* what,L
                 //record extra information to file_id
                 c->data.cface.file_id = s_strdup(buf);
             }else{
-                c = s_malloc0(sizeof(*c));
+                c = ( LwqqMsgContent*)s_malloc0(sizeof(*c));
                 c->type = LWQQ_CONTENT_OFFPIC;
                 c->data.img.name = s_strdup(img_fileName(fileName));
-                c->data.img.data = s_malloc(img_filesize(fileName));
+                c->data.img.data = (char*)s_malloc(img_filesize(fileName));
                 memcpy(c->data.img.data,imgBuffer,img_filesize(fileName));
                 c->data.img.size = img_filesize(fileName);
 //                c = lwqq_msg_fill_upload_offline_pic(
@@ -396,10 +396,10 @@ int translate_message_to_struct(LwqqClient* lc,const char* to,const char* what,L
 //                            img_filesize(fileName));
             }
        }else if(*begin==':'&&*(end-1)==':'){
-                fprintf(stderr, "face::::::");
+                //fprintf(stderr, "face::::::");
             if(strstr(begin,":face")==begin){
-                sscanf(begin,":face%d:",&img_id);
-                c = build_face_direct(img_id);
+                sscanf(begin,":face%d:",&face_id);
+                c = build_face_direct(face_id);
             }else if(strstr(begin,":-face:")==begin){
                 translate_face=!translate_face;
             }else{
@@ -409,7 +409,7 @@ int translate_message_to_struct(LwqqClient* lc,const char* to,const char* what,L
                 if(c==NULL) c = build_string_content(begin, end, mmsg);
             }
         }else if(begin[0]==':'){
-            fprintf(stderr, "begin :\n");
+            //fprintf(stderr, "begin :\n");
 //            //other :)
 //            c = translate_face?build_face_content(m.begin, m.len):NULL;
 //            if(c==NULL)
@@ -418,15 +418,15 @@ int translate_message_to_struct(LwqqClient* lc,const char* to,const char* what,L
 //                c->type = LWQQ_CONTENT_STRING;
 //                c->data.str = s_strdup(what);
 //                end = what[strlen(what)+1];
-//                fprintf(stderr, "malloc\n");
+//                //fprintf(stderr, "malloc\n");
 //                if(end == '\0')
-//                    fprintf(stderr, "0000\n");
+//                    //fprintf(stderr, "0000\n");
 //            }
             c = NULL;
            if(c==NULL) c = build_string_content(begin, end, mmsg);
        }else if(begin[0]=='&'){
         }else{
-             fprintf(stderr, "else :\n");
+             //fprintf(stderr, "else :\n");
 //            //other face with no fix style
             //c = translate_face?build_face_content(m.begin,m.len):NULL;
              c = NULL;
@@ -436,7 +436,7 @@ int translate_message_to_struct(LwqqClient* lc,const char* to,const char* what,L
         ptr = end;
         if(c!=NULL)
             lwqq_msg_content_append(mmsg, c);
-        fprintf(stderr, "lwqq_msg_content_append\n");
+        //fprintf(stderr, "lwqq_msg_content_append\n");
     }
     return 0;
 }
@@ -505,7 +505,7 @@ void translate_struct_to_message(qq_account* ac, LwqqMsgMessage* msg, char* buf)
                 break;
 #if 1
             case LWQQ_CONTENT_OFFPIC:
-                fprintf(stderr,"pic size:%d, file path:%s\n", c->data.img.size, c->data.img.file_path);
+                //fprintf(stderr,"pic size:%d, file path:%s\n", c->data.img.size, c->data.img.file_path);
                 if(c->data.img.size>0){
                     KTemporaryFile *inkImage = new KTemporaryFile();
                     inkImage->setPrefix("chatgif-");
@@ -518,7 +518,7 @@ void translate_struct_to_message(qq_account* ac, LwqqMsgMessage* msg, char* buf)
                     c->data.img.data = NULL;
                     //make it room to change num if necessary.
                     snprintf(piece,sizeof(piece),"<img src=\"%s\" />",inkImage->fileName().toUtf8().constData());
-                    fprintf(stderr, "url:%s\n", inkImage->fileName().toUtf8().constData());
+                    //fprintf(stderr, "url:%s\n", inkImage->fileName().toUtf8().constData());
                     strcat(buf,piece);
                 }else{
                     if((msg->super.super.type==LWQQ_MS_GROUP_MSG&&ac->flag&NOT_DOWNLOAD_GROUP_PIC)){
@@ -745,7 +745,7 @@ void translate_global_free()
 }
 const char* translate_smile(int face)
 {
-#if 1
+#if 0
     static char buf[64];
     struct smile_entry* entry = &smile_tables[0];
     while(entry->id != face&&entry->id!=-1){
@@ -757,8 +757,11 @@ const char* translate_smile(int face)
         if(buf[0]=='/') strcat(buf," ");
     }
     return buf;
+#else
+     static char buf[64];
+    snprintf(buf, sizeof(buf), ":face%d:",face);
 #endif
-    return NULL;
+    return buf;
 }
 
 void add_smiley(void* data,void* userdata)

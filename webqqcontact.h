@@ -23,6 +23,7 @@
 
 
 #include "kopetecontact.h"
+#include "kopeteonlinestatus.h"
 #include "kopetemessage.h"
 #include "kopetechatsession.h"
 #include "webqqchatsession.h"

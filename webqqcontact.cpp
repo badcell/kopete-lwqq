@@ -227,6 +227,8 @@ void WebqqContact::showContactSettings()
 	//p->show();
 }
 
+
+
 void WebqqContact::deleteContact()
 {
     if (!(((WebqqAccount*)account())->isOffline()))

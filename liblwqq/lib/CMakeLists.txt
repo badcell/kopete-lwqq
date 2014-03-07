@@ -70,10 +70,9 @@ if(WITH_LIBUV)
     set(LWQQ_OTHER_LIBS ${LWQQ_OTHER_LIBS} ${UV_LIBRARIES})
 endif()
 
-add_library(lwqq-static STATIC ${LWQQ_LIST} )
-set_target_properties(lwqq-static PROPERTIES OUTPUT_NAME lwqq)
+#add_library(lwqq-static STATIC ${LWQQ_LIST} )
+#set_target_properties(lwqq-static PROPERTIES OUTPUT_NAME lwqq)
 add_library(lwqq SHARED ${LWQQ_LIST} )
-
 target_link_libraries(lwqq
     ${SQLITE_LIBRARIES}
     ${CURL_LIBRARIES}
@@ -83,17 +82,17 @@ target_link_libraries(lwqq
 	-Wl,-Bdynamic pthread
     )
 
-target_link_libraries(lwqq-static
-    ${SQLITE_LIBRARIES}
-    ${CURL_LIBRARIES}
-    ${ZLIB_LIBRARIES}
-    ${MOZJS_LIBRARIES}
-    ${LWQQ_OTHER_LIBS}
-	-Wl,-Bdynamic pthread
-    )
+#target_link_libraries(lwqq-static
+#    ${SQLITE_LIBRARIES}
+#    ${CURL_LIBRARIES}
+#    ${ZLIB_LIBRARIES}
+#    ${MOZJS_LIBRARIES}
+#    ${LWQQ_OTHER_LIBS}
+#	-Wl,-Bdynamic pthread
+#    )
 
 if(LWQQ_INSTALL)
 install(TARGETS lwqq DESTINATION lib)
-install(TARGETS lwqq-static DESTINATION lib)
-install(FILES ${LWQQ_HEADER} DESTINATION include/lwqq)
+#install(TARGETS lwqq-static DESTINATION lib)
+#install(FILES ${LWQQ_HEADER} DESTINATION include/lwqq)
 endif()

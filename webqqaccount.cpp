@@ -556,7 +556,7 @@ void WebqqAccount::group_message(LwqqClient *lc, LwqqMsgMessage *msg)
         //        }
         //    }
         QDateTime msgDT;
-        msgDT.setTime_t(time(0L));
+        msgDT.setTime_t(msg->time);
         Kopete::Message kmsg( contact(sendId), justMe );
         kDebug(WEBQQ_GEN_DEBUG)<<"group message:"<<sendMsg;
         kmsg.setTimestamp( msgDT );
@@ -864,7 +864,7 @@ void WebqqAccount::ac_friend_avatar(LwqqClient* lc, LwqqBuddy *buddy)
     kDebug(WEBQQ_GEN_DEBUG)<<"buddy qqname:"<<QString::fromUtf8(buddy->qqnumber)<<"uin:"<<QString::fromUtf8(buddy->uin);
     /*find out the contact*/ 
     //kDebug(WEBQQ_GEN_DEBUG)<<"find out the contact";
-    if(strcmp(buddy->qqnumber, m_lc->myself->qqnumber) == 0)
+    if(strcmp(buddy->qqnumber, lc->myself->qqnumber) == 0)
     {
         Kopete::AvatarManager::AvatarEntry entry;
         entry.name = myself ()->contactId();;
@@ -1040,8 +1040,8 @@ void WebqqAccount::ac_group_members(LwqqClient *lc, LwqqGroup *group)
                             contact(g_id)->webqq_addcontacts(contact(QString(member->uin)));
                         }
                     }
-                    LIST_INSERT_HEAD(&m_lc->friends,buddy,entries);
-                    lwdb_userdb_insert_buddy_info(((qq_account*)(m_lc->data))->db, buddy);
+                    LIST_INSERT_HEAD(&lc->friends,buddy,entries);
+                    lwdb_userdb_insert_buddy_info(((qq_account*)(lc->data))->db, buddy);
                 }
             }
         }
@@ -1163,8 +1163,8 @@ void WebqqAccount::ac_login_stage_1(LwqqClient* lc,LwqqErrorCode* p_err)
         afterLogin(lc);
             break;
 	case LWQQ_EC_ERROR: /*error verify code or error password or error username*/
-	    printf("err msg: %s\n",m_lc->last_err);  
-	    if (strncmp(m_lc->last_err, "Wrong username or password", strlen("Wrong username or password")) == 0)
+        printf("err msg: %s\n",lc->last_err);
+        if (strncmp(lc->last_err, "Wrong username or password", strlen("Wrong username or password")) == 0)
 	    {	
 		password().setWrong();
 		/*this is very ugly, since we need user to reinput verfy code*/
@@ -1172,10 +1172,10 @@ void WebqqAccount::ac_login_stage_1(LwqqClient* lc,LwqqErrorCode* p_err)
 		KMessageBox::queuedMessageBox(Kopete::UI::Global::mainWidget(), KMessageBox::Error, message);
 		//KNotification::event( "Connect failed", message, myself()->onlineStatus().protocolIcon(KIconLoader::SizeMedium) );
 	    }
-	    else if (strncmp(m_lc->last_err, "Wrong verify code", strlen("Wrong verify code")) == 0)
+        else if (strncmp(lc->last_err, "Wrong verify code", strlen("Wrong verify code")) == 0)
 	    {
 		/*this is very ugly, since we need user to reinput verfy code*/
-		m_lc->vc = NULL;
+        lc->vc = NULL;
 		message = i18n( "Verify Code Error!");
 		KMessageBox::queuedMessageBox(Kopete::UI::Global::mainWidget(), KMessageBox::Error, message);
 		//KNotification::event( "Connect failed", message, myself()->onlineStatus().protocolIcon(KIconLoader::SizeMedium) );
@@ -1275,7 +1275,7 @@ void WebqqAccount::friend_come(LwqqClient* lc,LwqqBuddy* buddy)
     }
     else
     {
-        LIST_FOREACH(cate,&m_lc->categories,entries) 
+        LIST_FOREACH(cate,&lc->categories,entries)
 	{
             if(cate->index==cate_index) 
 	    {
