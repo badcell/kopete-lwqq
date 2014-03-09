@@ -1,7 +1,7 @@
 /*
-    webqqcontact.cpp - Kopete Webqq Protocol
+    webqqcontact.cpp - Kopete Webqq Contact
 
-    Copyright (c) 2003      by Will Stephenson		 <will@stevello.free-online.co.uk>
+    Copyright (c) 2003      by Jun Zhang		 <jun.zhang@i-soft.com.cn>
     Kopete    (c) 2002-2003 by the Kopete developers <kopete-devel@kde.org>
 
     *************************************************************************
