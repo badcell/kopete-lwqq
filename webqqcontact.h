@@ -133,6 +133,7 @@ private slots:
 signals:
     void getGroupMembersSignal(QString);
     void blockSignal(QString);
+    void getUserInfoSignal(QString,ConType);
 protected:
     WebqqChatSession* m_chatManager;
     WebqqGroupChatSession* m_groupManager;
@@ -154,5 +155,5 @@ protected:
 };
 
 static int qq_send_im(LwqqClient *lc, const char *who, const char *what, ConType type);
-
+int find_group_and_member_by_gid(LwqqClient* lc,const char* card,LwqqGroup** p_g,LwqqSimpleBuddy** p_sb);
 #endif

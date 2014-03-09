@@ -39,6 +39,7 @@ typedef enum  {
   FRIEND_COME,
   REWRITE_MSG,
   SET_GROUPNAME,
+  GET_USERINFO,
   
 }CallbackFunctionType;
 

@@ -27,11 +27,14 @@ class WebqqUserInfoForm : public QWidget
 
 public:
     WebqqUserInfoForm(WebqqContact *contact, QWidget *parent = 0);
-
+    void setInfo(LwqqBuddy *buddy);
 private slots:
 
 
 private:
+    void initLabel();
+    QString shengxiaoToStr(LwqqShengxiao shengxiao);
+    QString constellationToStr(LwqqConstel constel);
     Ui::WebqqUserInfoForm ui;
 };
 

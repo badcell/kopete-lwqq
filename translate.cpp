@@ -396,7 +396,6 @@ int translate_message_to_struct(LwqqClient* lc,const char* to,const char* what,L
 //                            img_filesize(fileName));
             }
        }else if(*begin==':'&&*(end-1)==':'){
-                //fprintf(stderr, "face::::::");
             if(strstr(begin,":face")==begin){
                 sscanf(begin,":face%d:",&face_id);
                 c = build_face_direct(face_id);
@@ -409,7 +408,19 @@ int translate_message_to_struct(LwqqClient* lc,const char* to,const char* what,L
                 if(c==NULL) c = build_string_content(begin, end, mmsg);
             }
         }else if(begin[0]==':'){
-            //fprintf(stderr, "begin :\n");
+            fprintf(stderr, "begin :\n");
+            if(strstr(begin,":face")==begin){
+                sscanf(begin,":face%d:",&face_id);
+                c = build_face_direct(face_id);
+                end =strstr(begin+1, ":") + 1;
+            }else if(strstr(begin,":-face:")==begin){
+                translate_face=!translate_face;
+            }else{
+                //other :faces:
+                //c = translate_face?build_face_content(m.begin, m.len):NULL;
+                 c = NULL;
+                if(c==NULL) c = build_string_content(begin, end, mmsg);
+            }
 //            //other :)
 //            c = translate_face?build_face_content(m.begin, m.len):NULL;
 //            if(c==NULL)
@@ -422,8 +433,7 @@ int translate_message_to_struct(LwqqClient* lc,const char* to,const char* what,L
 //                if(end == '\0')
 //                    //fprintf(stderr, "0000\n");
 //            }
-            c = NULL;
-           if(c==NULL) c = build_string_content(begin, end, mmsg);
+
        }else if(begin[0]=='&'){
         }else{
              //fprintf(stderr, "else :\n");

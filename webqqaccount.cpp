@@ -81,7 +81,7 @@
 
 #include "webqqaccount.h"
 #include "webqqshowgetinfo.h"
-
+#include "webqquserinfoform.h"
 
 #define OPEN_URL(var,url) snprintf(var,sizeof(var),"xdg-open '%s'",url);
 #define GLOBAL_HASH_JS() SHARE_DATA_DIR"/hash.js"
@@ -235,16 +235,7 @@ void WebqqAccount::initLwqqAccount()
 	
     lwqq_bit_set(ac->flag,QQ_USE_QQNUM,ac->db!=NULL);
 	
-	/*	
-	lwqq_bit_set(ac->flag,IGNORE_FONT_SIZE,purple_account_get_bool(account, "disable_custom_font_size", FALSE));
-	lwqq_bit_set(ac->flag, IGNORE_FONT_FACE, purple_account_get_bool(account, "disable_custom_font_face", FALSE));
-	lwqq_bit_set(ac->flag, DARK_THEME_ADAPT, purple_account_get_bool(account, "dark_theme_fix", FALSE));
-	lwqq_bit_set(ac->flag, DEBUG_FILE_SEND, purple_account_get_bool(account,"debug_file_send",FALSE));
-	lwqq_bit_set(ac->flag, REMOVE_DUPLICATED_MSG, purple_account_get_bool(account,"remove_duplicated_msg",FALSE));
-	lwqq_bit_set(ac->flag, QQ_DONT_EXPECT_100_CONTINUE,purple_account_get_bool(account,"dont_expected_100_continue",FALSE));
-	lwqq_bit_set(ac->flag, NOT_DOWNLOAD_GROUP_PIC, purple_account_get_bool(account, "no_download_group_pic", FALSE));
-	ac->recent_group_name = s_strdup(purple_account_get_string(account, "recent_group_name", "Recent Contacts"));
-*/
+
 }
 
 void WebqqAccount::destoryLwqqAccount()
@@ -385,6 +376,12 @@ void WebqqAccount::slotReceivedInstanceSignal(CallbackObject cb)
   {
       LwqqGroup* group = (LwqqGroup*)(cb.ptr1);
       this->ac_qq_set_group_name(group);
+  }else if(cb.fun_t == GET_USERINFO)
+  {
+      qq_account* ac = (qq_account*)(cb.ptr1);
+      LwqqBuddy* buddy = (LwqqBuddy*)(cb.ptr2);
+      char *who = (char*)(cb.ptr3);
+      this->ac_display_user_info(ac, buddy, who);
   }
   
   
@@ -566,6 +563,57 @@ void WebqqAccount::group_message(LwqqClient *lc, LwqqMsgMessage *msg)
         chatContact->setContactType(Contact_Group);
         chatContact->manager(Kopete::Contact::CanCreate)->appendMessage(kmsg);
     }
+}
+
+void WebqqAccount::slotGetUserInfo(QString id, ConType type)
+{
+    qq_account *ac = (qq_account*)(m_lc->data);
+    if(type == Contact_Chat)
+    {
+        LwqqBuddy* buddy;
+        buddy = find_buddy_by_qqnumber(m_lc,id.toUtf8().constData());
+        if(buddy){
+            LwqqAsyncEvent* ev = lwqq_info_get_friend_detail_info(m_lc, buddy);
+            lwqq_async_add_event_listener(ev, _C_(3p,cb_display_user_info,ac,buddy,s_strdup(id.toUtf8().constData())));
+        }
+    }else if(type == Contact_Session)
+    {
+        LwqqGroup* g = NULL;
+        LwqqSimpleBuddy* sb = NULL;
+        if(find_group_and_member_by_gid(m_lc, id.toUtf8().constData(), &g, &sb))
+        {
+            LwqqBuddy* buddy = lwqq_buddy_new();
+            buddy->uin = s_strdup(sb->uin);
+
+            LwqqAsyncEvset* set = lwqq_async_evset_new();
+            LwqqAsyncEvent* ev = NULL;
+            ev = lwqq_info_get_group_member_detail(m_lc,sb->uin,buddy);
+            lwqq_async_evset_add_event(set, ev);
+            ev = lwqq_info_get_friend_qqnumber(m_lc,buddy);
+            lwqq_async_evset_add_event(set, ev);
+            lwqq_async_add_evset_listener(set, _C_(3p,cb_display_user_info,ac,buddy, s_strdup(id.toUtf8().constData())));
+        }
+    }
+}
+
+void WebqqAccount::ac_display_user_info(qq_account *ac, LwqqBuddy *b, char *who)
+{
+    char uin[128]={0};
+    char gid[128]={0};
+    const char* pos;
+    QString id;
+    if((pos = strstr(who," ### "))!=NULL) {
+        strcpy(gid,pos+strlen(" ### "));
+        strncpy(uin,who,pos-who);
+        uin[pos-who] = '\0';
+        id = QString(uin);
+    }else{
+        id = QString(who);
+        lwdb_userdb_update_buddy_info(ac->db, b);
+    }
+    WebqqUserInfoForm *info = new WebqqUserInfoForm(contact(id));
+    info->setInfo(b);
+    info->show();
 }
 
 void WebqqAccount::receivedGroupMessage(LwqqGroup *group, LwqqMsgMessage *msg)
@@ -865,7 +913,7 @@ void WebqqAccount::ac_friend_avatar(LwqqClient* lc, LwqqBuddy *buddy)
     kDebug(WEBQQ_GEN_DEBUG)<<"buddy qqname:"<<QString::fromUtf8(buddy->qqnumber)<<"uin:"<<QString::fromUtf8(buddy->uin);
     /*find out the contact*/ 
     //kDebug(WEBQQ_GEN_DEBUG)<<"find out the contact";
-    if(strcmp(buddy->qqnumber, lc->myself->qqnumber) == 0)
+    if(strcmp(buddy->qqnumber, m_lc->username) == 0)
     {
         Kopete::AvatarManager::AvatarEntry entry;
         entry.name = myself ()->contactId();;
@@ -907,6 +955,8 @@ void WebqqAccount::ac_friend_avatar(LwqqClient* lc, LwqqBuddy *buddy)
         friendContact->setOnlineStatus(webqqStatus);
         friendContact->setContactType(Contact_Chat);
         friendContact->setProperty(Kopete::Global::Properties::self ()->nickName (), displayName);
+        QObject::connect(friendContact, SIGNAL(getUserInfoSignal(QString,ConType)), \
+                         this, SLOT(slotGetUserInfo(QString,ConType)));
         /*set the contact's icon*/
         // kDebug(WEBQQ_GEN_DEBUG) <<"contact icon:" << bytearry.size();
         if (!bytearry.isEmpty())
@@ -994,6 +1044,8 @@ void WebqqAccount::ac_group_members(LwqqClient *lc, LwqqGroup *group)
                                                                                     QString::fromUtf8(group->name));
                                 contact(QString(buddy->qqnumber))->setProperty(Kopete::Global::Properties::self ()->nickName (), contactName);
                                 contact(QString(buddy->qqnumber))->setOnlineStatus(statusFromLwqqStatus(buddy->stat));
+                                QObject::connect(contact(QString(buddy->qqnumber)), SIGNAL(getUserInfoSignal(QString,ConType)),\
+                                                 this, SLOT(slotGetUserInfo(QString,ConType)));
                                 contact(g_id)->webqq_addcontacts(contact(QString(buddy->qqnumber)));
                             }
                         }else
@@ -1007,6 +1059,8 @@ void WebqqAccount::ac_group_members(LwqqClient *lc, LwqqGroup *group)
                                                                                QString::fromUtf8(group->name));
                                 contact(QString(buddy->uin))->setProperty(Kopete::Global::Properties::self ()->nickName (), contactName);
                                 contact(QString(buddy->uin))->setOnlineStatus(statusFromLwqqStatus(buddy->stat));
+                                QObject::connect(contact(QString(buddy->uin)), SIGNAL(getUserInfoSignal(QString,ConType)),\
+                                                 this, SLOT(slotGetUserInfo(QString,ConType)));
                                 contact(g_id)->webqq_addcontacts(contact(QString(buddy->uin)));
                             }
                         }
@@ -1026,6 +1080,8 @@ void WebqqAccount::ac_group_members(LwqqClient *lc, LwqqGroup *group)
                             contact(QString(member->qq) )->set_session_info(g_id, QString::fromUtf8(group->name));
                             contact(QString(member->qq))->setProperty(Kopete::Global::Properties::self ()->nickName (), contactName);
                             contact(QString(member->qq))->setOnlineStatus(statusFromLwqqStatus(member->stat));
+                            QObject::connect(contact(QString(member->qq)), SIGNAL(getUserInfoSignal(QString,ConType)),\
+                                             this, SLOT(slotGetUserInfo(QString,ConType)));
                             contact(g_id)->webqq_addcontacts(contact(QString(member->qq)));
                         }
                     }else if(member->uin)
@@ -1038,6 +1094,8 @@ void WebqqAccount::ac_group_members(LwqqClient *lc, LwqqGroup *group)
                             contact(QString(member->uin) )->set_session_info(g_id, QString::fromUtf8(group->name));
                             contact(QString(member->uin))->setProperty(Kopete::Global::Properties::self ()->nickName (), contactName);
                             contact(QString(member->uin))->setOnlineStatus(statusFromLwqqStatus(member->stat));
+                            QObject::connect(contact(QString(member->uin)), SIGNAL(getUserInfoSignal(QString,ConType)),\
+                                             this, SLOT(slotGetUserInfo(QString,ConType)));
                             contact(g_id)->webqq_addcontacts(contact(QString(member->uin)));
                         }
                     }
@@ -1484,16 +1542,21 @@ void WebqqAccount::group_come(LwqqClient* lc,LwqqGroup* group)
         addContact( QString(group->gid), displayName,  targetGroup, Kopete::Account::ChangeKABC );
         if(!contact(QString(group->gid)))
                 return;
-        QObject::connect(contact(QString(group->gid)) , SIGNAL(getGroupMembersSignal(QString)), this, SLOT(slotGetGroupMembers(QString)));
+        QObject::connect(contact(QString(group->gid)) , SIGNAL(getGroupMembersSignal(QString)), \
+                         this, SLOT(slotGetGroupMembers(QString)));
         QObject::connect(contact(QString(group->gid)) , SIGNAL(blockSignal(QString)), this, SLOT(slotBlock(QString)));
-
+        QObject::connect(contact(QString(group->gid)), SIGNAL(getUserInfoSignal(QString,ConType)),\
+                         this, SLOT(slotGetUserInfo(QString,ConType)));
     }else if(group->type == LwqqGroup::LWQQ_GROUP_DISCU)
     {
         addContact( QString(group->did), displayName,  targetGroup, Kopete::Account::ChangeKABC );
         if(!contact(QString(group->did)))
             return;
-        QObject::connect(contact(QString(group->did)) , SIGNAL(getGroupMembersSignal(QString)), this, SLOT(slotGetGroupMembers(QString)));
+        QObject::connect(contact(QString(group->did)) , SIGNAL(getGroupMembersSignal(QString)), \
+                         this, SLOT(slotGetGroupMembers(QString)));
         QObject::connect(contact(QString(group->did)) , SIGNAL(blockSignal(QString)), this, SLOT(slotBlock(QString)));
+        QObject::connect(contact(QString(group->did)), SIGNAL(getUserInfoSignal(QString,ConType)),\
+                         this, SLOT(slotGetUserInfo(QString,ConType)));
     }
 
     ac_qq_set_group_name(group);
@@ -2137,6 +2200,16 @@ void cb_qq_set_group_name(LwqqGroup *group)
     CallbackObject cb;
     cb.fun_t = SET_GROUPNAME;
     cb.ptr1 = (void *)group;
+    ObjectInstance::instance()->callSignal(cb);
+}
+
+void cb_display_user_info(qq_account *ac, LwqqBuddy *b, char *who)
+{
+    CallbackObject cb;
+    cb.fun_t = GET_USERINFO;
+    cb.ptr1 = (void *)ac;
+    cb.ptr2 = (void*)b;
+    cb.ptr3 = (void*)who;
     ObjectInstance::instance()->callSignal(cb);
 }
 

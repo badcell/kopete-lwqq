@@ -286,8 +286,10 @@ void WebqqContact::setDisplayPicture(const QByteArray &data)
 
 void WebqqContact::slotUserInfo()
 {	
-	WebqqUserInfoForm *form = new WebqqUserInfoForm(this);
-	form->show();
+    if(m_contactType == Contact_Session)
+        emit getUserInfoSignal((m_userId + " ### " + m_sessionId), m_contactType);
+    else
+        emit getUserInfoSignal(m_userId, m_contactType);
 }
 
 void WebqqContact::imageContact(const QString &file)

@@ -133,6 +133,7 @@ public slots:
     void ac_friend_come(LwqqClient* lc,LwqqBuddy* b);
     void ac_rewrite_whole_message_list(LwqqAsyncEvent* ev,qq_account* ac,LwqqGroup* group);
     void ac_qq_set_group_name(LwqqGroup* group);
+    void ac_display_user_info(qq_account* ac, LwqqBuddy* b, char* who);
 	void slotReceivedInstanceSignal(CallbackObject cb);
     void blist_change(LwqqClient* lc,LwqqMsgBlistChange* blist);
 	void pollMessage();
@@ -143,6 +144,8 @@ public slots:
     void slotGetGroupMembers(QString id);
 	
     void slotBlock(QString id);
+
+    void slotGetUserInfo(QString id, ConType type);
 protected:
 	/**
 	 * This simulates contacts going on and offline in sync with the account's status changes
@@ -243,6 +246,7 @@ static void cb_flush_group_members(LwqqClient* lc, LwqqGroup **g);
 static void cb_return_friend_come(LwqqClient* lc,LwqqBuddy* b);
 static void cb_rewrite_whole_message_list(LwqqAsyncEvent* ev,qq_account* ac,LwqqGroup* group);
 static void cb_qq_set_group_name(LwqqGroup* group);
+static void cb_display_user_info(qq_account* ac, LwqqBuddy* b, char *who);
 static void set_cgroup_block(LwqqConfirmTable* ct,LwqqClient* lc,LwqqGroup* g);
 static void confirm_table_yes(LwqqConfirmTable* table, const char *input, LwqqAnswer answer);
 static void confirm_table_no(LwqqConfirmTable* table,const char *input);
