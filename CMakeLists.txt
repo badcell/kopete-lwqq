@@ -69,6 +69,7 @@ ${KOPETE_BINARY_DIR}/lib
 
 
 add_subdirectory( icons ) 
+add_subdirectory( emoticons ) 
 
 
 include_directories( 
