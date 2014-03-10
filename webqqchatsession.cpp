@@ -109,7 +109,7 @@ void WebqqChatSession::slotimageContact()
 {
 
     QString fileName = QFileDialog::getOpenFileName(NULL, tr("Open File"),
-                                                     "/home",
+                                                    QDir::homePath(),
                                                      tr("Images (*.png *.xpm *.jpg *.gif *.bmp *jpeg)"));
     if(!fileName.isNull())
     {

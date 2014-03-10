@@ -408,7 +408,6 @@ int translate_message_to_struct(LwqqClient* lc,const char* to,const char* what,L
                 if(c==NULL) c = build_string_content(begin, end, mmsg);
             }
         }else if(begin[0]==':'){
-            fprintf(stderr, "begin :\n");
             if(strstr(begin,":face")==begin){
                 sscanf(begin,":face%d:",&face_id);
                 c = build_face_direct(face_id);

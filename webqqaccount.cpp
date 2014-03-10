@@ -1043,7 +1043,7 @@ void WebqqAccount::ac_group_members(LwqqClient *lc, LwqqGroup *group)
                                 contact(QString(buddy->qqnumber))->set_session_info(QString((group->type == LwqqGroup::LWQQ_GROUP_QUN? group->gid:group->did)), \
                                                                                     QString::fromUtf8(group->name));
                                 contact(QString(buddy->qqnumber))->setProperty(Kopete::Global::Properties::self ()->nickName (), contactName);
-                                contact(QString(buddy->qqnumber))->setOnlineStatus(statusFromLwqqStatus(buddy->stat));
+                                //contact(QString(buddy->qqnumber))->setOnlineStatus(statusFromLwqqStatus(buddy->stat));
                                 QObject::connect(contact(QString(buddy->qqnumber)), SIGNAL(getUserInfoSignal(QString,ConType)),\
                                                  this, SLOT(slotGetUserInfo(QString,ConType)));
                                 contact(g_id)->webqq_addcontacts(contact(QString(buddy->qqnumber)));
@@ -1058,7 +1058,7 @@ void WebqqAccount::ac_group_members(LwqqClient *lc, LwqqGroup *group)
                                 contact(QString(buddy->uin))->set_session_info(g_id, \
                                                                                QString::fromUtf8(group->name));
                                 contact(QString(buddy->uin))->setProperty(Kopete::Global::Properties::self ()->nickName (), contactName);
-                                contact(QString(buddy->uin))->setOnlineStatus(statusFromLwqqStatus(buddy->stat));
+                                //contact(QString(buddy->uin))->setOnlineStatus(statusFromLwqqStatus(buddy->stat));
                                 QObject::connect(contact(QString(buddy->uin)), SIGNAL(getUserInfoSignal(QString,ConType)),\
                                                  this, SLOT(slotGetUserInfo(QString,ConType)));
                                 contact(g_id)->webqq_addcontacts(contact(QString(buddy->uin)));
@@ -1079,7 +1079,7 @@ void WebqqAccount::ac_group_members(LwqqClient *lc, LwqqGroup *group)
                             contact(QString(member->qq) )->setContactType(Contact_Session);
                             contact(QString(member->qq) )->set_session_info(g_id, QString::fromUtf8(group->name));
                             contact(QString(member->qq))->setProperty(Kopete::Global::Properties::self ()->nickName (), contactName);
-                            contact(QString(member->qq))->setOnlineStatus(statusFromLwqqStatus(member->stat));
+                            //contact(QString(member->qq))->setOnlineStatus(statusFromLwqqStatus(member->stat));
                             QObject::connect(contact(QString(member->qq)), SIGNAL(getUserInfoSignal(QString,ConType)),\
                                              this, SLOT(slotGetUserInfo(QString,ConType)));
                             contact(g_id)->webqq_addcontacts(contact(QString(member->qq)));
@@ -1093,7 +1093,7 @@ void WebqqAccount::ac_group_members(LwqqClient *lc, LwqqGroup *group)
                             contact(QString(member->uin) )->setContactType(Contact_Session);
                             contact(QString(member->uin) )->set_session_info(g_id, QString::fromUtf8(group->name));
                             contact(QString(member->uin))->setProperty(Kopete::Global::Properties::self ()->nickName (), contactName);
-                            contact(QString(member->uin))->setOnlineStatus(statusFromLwqqStatus(member->stat));
+                            //contact(QString(member->uin))->setOnlineStatus(statusFromLwqqStatus(member->stat));
                             QObject::connect(contact(QString(member->uin)), SIGNAL(getUserInfoSignal(QString,ConType)),\
                                              this, SLOT(slotGetUserInfo(QString,ConType)));
                             contact(g_id)->webqq_addcontacts(contact(QString(member->uin)));
@@ -1177,7 +1177,7 @@ void WebqqAccount::ac_group_members(LwqqClient *lc, LwqqGroup *group)
 
 void WebqqAccount::ac_need_verify2(LwqqClient* lc, LwqqVerifyCode* code)
 {
-    printf("[%s] \n", __FUNCTION__);
+    //printf("[%s] \n", __FUNCTION__);
     const char *dir = "/tmp/kopete-qq/";
    // char fname[50];
     //snprintf(fname,sizeof(fname),"%s.gif",lc->username);
@@ -1222,7 +1222,7 @@ void WebqqAccount::ac_login_stage_1(LwqqClient* lc,LwqqErrorCode* p_err)
         afterLogin(lc);
             break;
 	case LWQQ_EC_ERROR: /*error verify code or error password or error username*/
-        printf("err msg: %s\n",lc->last_err);
+        //printf("err msg: %s\n",lc->last_err);
         if (strncmp(lc->last_err, "Wrong username or password", strlen("Wrong username or password")) == 0)
 	    {	
 		password().setWrong();

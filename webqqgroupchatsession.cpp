@@ -27,6 +27,7 @@
 #include <kcomponentdata.h>
 #include <kaction.h>
 #include <QFileDialog>
+#include <QDir>
 #include <kopetecontactlist.h>
 #include <kopetecontact.h>
 #include <kopetechatsessionmanager.h>
@@ -68,7 +69,7 @@ WebqqGroupChatSession::~WebqqGroupChatSession()
 void WebqqGroupChatSession::slotimageContact()
 {
     QString fileName = QFileDialog::getOpenFileName(NULL, tr("Open File"),
-                                                     "/home",
+                                                     QDir::homePath(),
                                                      tr("Images (*.png *.xpm *.jpg *.gif *.bmp *jpeg)"));
     if(!fileName.isNull())
     {
