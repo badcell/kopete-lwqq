@@ -36,6 +36,7 @@ public:
     virtual ~ShowGetInfoDialog(){};
     QString getVerificationString();
     void setVerifify();
+    void setLongNick(const QString &inputStr);
     void setAddInfo(QString info);
     void setUserInfo(QString info);
     void setRequired(QString info);

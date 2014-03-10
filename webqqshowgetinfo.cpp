@@ -34,15 +34,31 @@ ShowGetInfoDialog::ShowGetInfoDialog(QWidget *parent)
 
 void ShowGetInfoDialog::setVerifify()
 {
-    m_showLabel->setText(tr("Verification info"));
-    m_okButton->setText(tr("OK"));
-    m_cancelButton->setText(tr("Cancel"));
-    setWindowTitle(tr("add friend"));
+    m_showLabel->setText(i18n("Verification info"));
+    m_okButton->setText(i18n("OK"));
+    m_cancelButton->setText(i18n("Cancel"));
+    setWindowTitle(i18n("add friend"));
     QGridLayout* pGridLayout = new QGridLayout();
     pGridLayout->addWidget(m_showLabel, 1, 1, 1, 2);
     pGridLayout->addWidget(m_inputverififyEdit, 1, 4, 1, 3);
     pGridLayout->addWidget(m_cancelButton, 2, 2, 1, 2);
     pGridLayout->addWidget(m_okButton, 2, 5, 1, 2);
+    setLayout(pGridLayout);
+    resize(400, 200);
+}
+
+void ShowGetInfoDialog::setLongNick(const QString &inputStr)
+{
+    m_showLabel->setText(i18n("LongNick"));
+    m_okButton->setText(i18n("OK"));
+    m_cancelButton->setText(i18n("Cancel"));
+    m_inputverififyEdit->setText(inputStr);
+    setWindowTitle(i18n("Change LongNick"));
+    QGridLayout* pGridLayout = new QGridLayout();
+    pGridLayout->addWidget(m_showLabel, 1, 1, 1, 2);
+    pGridLayout->addWidget(m_inputverififyEdit, 1, 2, 1, 3);
+    pGridLayout->addWidget(m_cancelButton, 2, 2, 1, 1);
+    pGridLayout->addWidget(m_okButton, 2, 3, 1, 1);
     setLayout(pGridLayout);
     resize(400, 200);
 }

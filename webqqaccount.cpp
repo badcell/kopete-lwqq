@@ -145,9 +145,19 @@ void WebqqAccount::fillActionMenu( KActionMenu *actionMenu )
 	QObject::connect( action, SIGNAL(triggered(bool)), this, SLOT(slotShowVideo()) );
 	actionMenu->addAction(action);
 	action->setEnabled( isConnected() );
+
+    KAction *nickAction = new KAction (KIcon("webqq_changeNick"), i18n ("change LongNick"), actionMenu );
+    QObject::connect(nickAction, SIGNAL(triggered(bool)), this, SLOT(slotChangeNick()));
+    actionMenu->addAction(nickAction);
+    nickAction->setEnabled(isConnected());
+
 }
 
-
+void WebqqAccount::slotChangeNick()
+{
+    LwqqAsyncEvent* ev = lwqq_info_get_single_long_nick(m_lc, m_lc->myself);
+    lwqq_async_add_event_listener(ev, _C_(p,display_self_longnick,m_lc));
+}
 
 
 void WebqqAccount::setAway( bool away, const QString & /* reason */ )
@@ -913,7 +923,7 @@ void WebqqAccount::ac_friend_avatar(LwqqClient* lc, LwqqBuddy *buddy)
     kDebug(WEBQQ_GEN_DEBUG)<<"buddy qqname:"<<QString::fromUtf8(buddy->qqnumber)<<"uin:"<<QString::fromUtf8(buddy->uin);
     /*find out the contact*/ 
     //kDebug(WEBQQ_GEN_DEBUG)<<"find out the contact";
-    if(strcmp(buddy->qqnumber, m_lc->username) == 0)
+    if(strcmp(buddy->qqnumber, accountId().toAscii().constData()) == 0)
     {
         Kopete::AvatarManager::AvatarEntry entry;
         entry.name = myself ()->contactId();;
@@ -1995,15 +2005,28 @@ void WebqqAccount::ac_show_confirm_table(LwqqClient *lc, LwqqConfirmTable *table
 
     }
     if(table->input_label){
-        ShowGetInfoDialog *dlg = new ShowGetInfoDialog();
-        dlg->setVerifify();
-        dlg->exec();
-        QString input = dlg->getVerificationString();
-        if(dlg->okOrCancle() == "OK")
-            confirm_table_yes(table, input.toUtf8().constData(), 0);
-        else
-            confirm_table_no(table, input.toUtf8().constData());
-        delete dlg;
+        if(strcmp(table->input_label, "Longnick") == 0)
+        {
+            ShowGetInfoDialog *dlg = new ShowGetInfoDialog();
+            dlg->setLongNick(QString::fromUtf8(table->input));
+            dlg->exec();
+            QString input = dlg->getVerificationString();
+            if(dlg->okOrCancle() == "OK")
+                confirm_table_yes(table, input.toUtf8().constData(), 0);
+            else
+                confirm_table_no(table, input.toUtf8().constData());
+            delete dlg;
+        }else{
+            ShowGetInfoDialog *dlg = new ShowGetInfoDialog();
+            dlg->setVerifify();
+            dlg->exec();
+            QString input = dlg->getVerificationString();
+            if(dlg->okOrCancle() == "OK")
+                confirm_table_yes(table, input.toUtf8().constData(), 0);
+            else
+                confirm_table_no(table, input.toUtf8().constData());
+            delete dlg;
+        }
     }
 
 }
@@ -2547,6 +2570,24 @@ static void set_cgroup_block(LwqqConfirmTable* ct,LwqqClient* lc,LwqqGroup* g)
     lwqq_ct_free(ct);
 }
 
+static void modify_self_longnick(LwqqClient* lc,LwqqConfirmTable* ct)
+{
+    if(ct->answer == LWQQ_YES){
+        const char* longnick = ct->input;
+        lwqq_info_set_self_long_nick(lc, longnick);
+    }
+    lwqq_ct_free(ct);
+}
+
+static void display_self_longnick(LwqqClient* lc)
+{
+    LwqqConfirmTable* ct = s_malloc0(sizeof(*ct));
+    ct->title = s_strdup(_("Modify Self Longnick"));
+    ct->input_label = s_strdup("Longnick");
+    ct->input = s_strdup(lc->myself->long_nick);
+    ct->cmd = _C_(2p,modify_self_longnick,lc,ct);
+    cb_show_confirm_table(lc, ct, NULL);
+}
 #endif
 
 

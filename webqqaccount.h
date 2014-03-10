@@ -183,6 +183,7 @@ protected slots:
 	 */
 	void slotGoHidden();
 
+    void slotChangeNick();
 
 private: 
     /*
@@ -258,7 +259,7 @@ void qq_add_buddy( LwqqClient* lc, const char *username, const char *message);
 static void add_friend(LwqqClient* lc,LwqqConfirmTable* c,LwqqBuddy* b,char* message);
 static void get_friends_info_retry(LwqqClient* lc,LwqqHashFunc hashtry);
 static void write_buddy_to_db(LwqqClient* lc,LwqqBuddy* b);
-
+static void display_self_longnick(LwqqClient* lc);
 Kopete::OnlineStatus statusFromLwqqStatus(LwqqStatus status);
 
 
