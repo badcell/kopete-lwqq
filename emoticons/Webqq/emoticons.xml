@@ -1,0 +1,315 @@
+<?xml version='1.0'?>
+<messaging-emoticon-map>
+    <emoticon file="0.gif">
+        <string>:face14:</string>
+    </emoticon>
+    <emoticon file="1.gif">
+        <string>:face1:</string>
+    </emoticon>
+    <emoticon file="2.gif">
+        <string>:face2:</string>
+    </emoticon>
+    <emoticon file="3.gif">
+        <string>:face3:</string>
+    </emoticon>
+    <emoticon file="4.gif">
+        <string>:face4:</string>
+    </emoticon>
+    <emoticon file="5.gif">
+        <string>:face5:</string>
+    </emoticon>
+    <emoticon file="6.gif">
+        <string>:face6:</string>
+    </emoticon>
+    <emoticon file="7.gif">
+        <string>:face7:</string>
+    </emoticon>
+    <emoticon file="8.gif">
+        <string>:face8:</string>
+    </emoticon>
+    <emoticon file="9.gif">
+        <string>:face9:</string>
+    </emoticon>
+    <emoticon file="10.gif">
+        <string>:face10:</string>
+    </emoticon>
+    <emoticon file="11.gif">
+        <string>:face11:</string>
+    </emoticon>
+    <emoticon file="12.gif">
+        <string>:face12:</string>
+    </emoticon>
+    <emoticon file="13.gif">
+        <string>:face13:</string>
+    </emoticon>
+    <emoticon file="14.gif">
+        <string>:face0:</string>
+    </emoticon>
+    <emoticon file="15.gif">
+        <string>:face50:</string>
+    </emoticon>
+    <emoticon file="16.gif">
+        <string>:face51:</string>
+    </emoticon>
+    <emoticon file="17.gif">
+        <string>:face96:</string>
+    </emoticon>
+    <emoticon file="18.gif">
+        <string>:face53:</string>
+    </emoticon>
+    <emoticon file="19.gif">
+        <string>:face54:</string>
+    </emoticon>
+    <emoticon file="20.gif">
+        <string>:face73:</string>
+    </emoticon>
+    <emoticon file="21.gif">
+        <string>:face74:</string>
+    </emoticon>
+    <emoticon file="22.gif">
+        <string>:face75:</string>
+    </emoticon>
+    <emoticon file="23.gif">
+        <string>:face76:</string>
+    </emoticon>
+    <emoticon file="24.gif">
+        <string>:face77:</string>
+    </emoticon>
+    <emoticon file="25.gif">
+        <string>:face78:</string>
+    </emoticon>
+    <emoticon file="26.gif">
+        <string>:face55:</string>
+    </emoticon>
+    <emoticon file="27.gif">
+        <string>:face56:</string>
+    </emoticon>
+    <emoticon file="28.gif">
+        <string>:face:57</string>
+    </emoticon>
+    <emoticon file="29.gif">
+        <string>:face58:</string>
+    </emoticon>
+    <emoticon file="30.gif">
+        <string>:face79:</string>
+    </emoticon>
+    <emoticon file="31.gif">
+        <string>:face80:</string>
+    </emoticon>
+    <emoticon file="32.gif">
+        <string>:face81:</string>
+    </emoticon>
+    <emoticon file="33.gif">
+        <string>:face82:</string>
+    </emoticon>
+    <emoticon file="34.gif">
+        <string>:face83:</string>
+    </emoticon>
+    <emoticon file="35.gif">
+        <string>:face84:</string>
+    </emoticon>
+    <emoticon file="36.gif">
+        <string>:face85:</string>
+    </emoticon>
+    <emoticon file="37.gif">
+        <string>:face86:</string>
+    </emoticon>
+    <emoticon file="38.gif">
+        <string>:face87:</string>
+    </emoticon>
+    <emoticon file="39.gif">
+        <string>:face88:</string>
+    </emoticon>
+    <emoticon file="40.gif">
+        <string>:face97:</string>
+    </emoticon>
+    <emoticon file="41.gif">
+        <string>:face98:</string>
+    </emoticon>
+    <emoticon file="42.gif">
+        <string>:face99:</string>
+    </emoticon>
+    <emoticon file="43.gif">
+        <string>:face100:</string>
+    </emoticon>
+    <emoticon file="44.gif">
+        <string>:face101:</string>
+    </emoticon>
+    <emoticon file="45.gif">
+        <string>:face102:</string>
+    </emoticon>
+    <emoticon file="46.gif">
+        <string>:face103:</string>
+    </emoticon>
+    <emoticon file="47.gif">
+        <string>:face104:</string>
+    </emoticon>
+    <emoticon file="48.gif">
+        <string>:face105:</string>
+    </emoticon>
+    <emoticon file="49.gif">
+        <string>:face106:</string>
+    </emoticon>
+    <emoticon file="50.gif">
+        <string>:face107:</string>
+    </emoticon>
+    <emoticon file="51.gif">
+        <string>:face108:</string>
+    </emoticon>
+    <emoticon file="52.gif">
+        <string>:face109:</string>
+    </emoticon>
+    <emoticon file="53.gif">
+        <string>:face110:</string>
+    </emoticon>
+    <emoticon file="54.gif">
+        <string>:face111:</string>
+    </emoticon>
+    <emoticon file="55.gif">
+        <string>:face112:</string>
+    </emoticon>
+    <emoticon file="56.gif">
+        <string>:face32:</string>
+    </emoticon>
+    <emoticon file="57.gif">
+        <string>:face113:</string>
+    </emoticon>
+    <emoticon file="58.gif">
+        <string>:face114:</string>
+    </emoticon>
+    <emoticon file="59.gif">
+        <string>:face115:</string>
+    </emoticon>
+    <emoticon file="60.gif">
+        <string>:face63:</string>
+    </emoticon>
+    <emoticon file="62.gif">
+        <string>:face59:</string>
+    </emoticon>
+    <emoticon file="63.gif">
+        <string>:face33:</string>
+    </emoticon>
+    <emoticon file="64.gif">
+        <string>:face34:</string>
+    </emoticon>
+    <emoticon file="65.gif">
+        <string>:face116:</string>
+    </emoticon>
+    <emoticon file="66.gif">
+        <string>:face36:</string>
+    </emoticon>
+    <emoticon file="67.gif">
+        <string>:face37:</string>
+    </emoticon>
+    <emoticon file="68.gif">
+        <string>:face38:</string>
+    </emoticon>
+    <emoticon file="69.gif">
+        <string>:face91:</string>
+    </emoticon>
+    <emoticon file="70.gif">
+        <string>:face92:</string>
+    </emoticon>
+    <emoticon file="71.gif">
+        <string>:face93:</string>
+    </emoticon>
+    <emoticon file="72.gif">
+        <string>:face29:</string>
+    </emoticon>
+    <emoticon file="73.gif">
+        <string>:face117:</string>
+    </emoticon>
+    <emoticon file="74.gif">
+        <string>:face72:</string>
+    </emoticon>
+    <emoticon file="75.gif">
+        <string>:face45:</string>
+    </emoticon>
+    <emoticon file="76.gif">
+        <string>:face42:</string>
+    </emoticon>
+    <emoticon file="77.gif">
+        <string>:face39:</string>
+    </emoticon>
+    <emoticon file="78.gif">
+        <string>:face62:</string>
+    </emoticon>
+    <emoticon file="79.gif">
+        <string>:face46:</string>
+    </emoticon>
+    <emoticon file="80.gif">
+        <string>:face47:</string>
+    </emoticon>
+    <emoticon file="81.gif">
+        <string>:face71:</string>
+    </emoticon>
+    <emoticon file="82.gif">
+        <string>:face95:</string>
+    </emoticon>
+    <emoticon file="83.gif">
+        <string>:face118:</string>
+    </emoticon>
+    <emoticon file="84.gif">
+        <string>:face119:</string>
+    </emoticon>
+    <emoticon file="85.gif">
+        <string>:face120:</string>
+    </emoticon>
+    <emoticon file="86.gif">
+        <string>:face121:</string>
+    </emoticon>
+    <emoticon file="87.gif">
+        <string>:face122:</string>
+    </emoticon>
+    <emoticon file="88.gif">
+        <string>:face123:</string>
+    </emoticon>
+    <emoticon file="89.gif">
+        <string>:face124:</string>
+    </emoticon>
+    <emoticon file="90.gif">
+        <string>:face27:</string>
+    </emoticon>
+    <emoticon file="91.gif">
+        <string>:face21:</string>
+    </emoticon>
+    <emoticon file="92.gif">
+        <string>:face23:</string>
+    </emoticon>
+    <emoticon file="93.gif">
+        <string>:face25:</string>
+    </emoticon>
+    <emoticon file="94.gif">
+        <string>:face26:</string>
+    </emoticon>
+    <emoticon file="95.gif">
+        <string>:face125:</string>
+    </emoticon>
+    <emoticon file="96.gif">
+        <string>:face126:</string>
+    </emoticon>
+    <emoticon file="97.gif">
+        <string>:face127:</string>
+    </emoticon>
+    <emoticon file="98.gif">
+        <string>:face128:</string>
+    </emoticon>
+    <emoticon file="99.gif">
+        <string>:face129:</string>
+    </emoticon>
+    <emoticon file="100.gif">
+        <string>:face130:</string>
+    </emoticon>
+    <emoticon file="101.gif">
+        <string>:face131:</string>
+    </emoticon>
+    <emoticon file="102.gif">
+        <string>:face132:</string>
+    </emoticon>
+    <emoticon file="103.gif">
+        <string>:face133:</string>
+    </emoticon>
+    <emoticon file="104.gif">
+        <string>:face134:</string>
+    </emoticon>
+</messaging-emoticon-map>

@@ -6,7 +6,14 @@
 #include "translate.h"
 #include "trex.h"
 #include "qq_types.h"
-
+#include "msg.h"
+#include <ktemporaryfile.h>
+#include <QString>
+#include <sys/stat.h>
+#include <unistd.h>
+#include <libgen.h>
+#include <fcntl.h>
+#include <stdio.h>
 #ifndef INST_PREFIX
 #define INST_PREFIX "/usr"
 #endif
@@ -133,7 +140,7 @@ const char* HTML_SYMBOL = "<[^>]+>|&amp;|&quot;|&gt;|&lt;";
 #define sizeunmap(px) ((px-6)/2)
 static char* build_smiley_exp()
 {
-    char* exp = s_malloc0(2048);
+    char* exp = (char*)s_malloc0(2048);
     char* spec_char = "()[]*$\\|+";
     //<IMG ID=''> is belongs to <.*?>
     //first html label .then smiley
@@ -178,18 +185,19 @@ static LwqqMsgContent* build_string_content(const char* from,const char* to,Lwqq
     if(last && last->type == LWQQ_CONTENT_STRING){
         c = NULL;//return NULL
         size_t sz = strlen(last->data.str);
-        last->data.str = s_realloc(last->data.str,sz+to-from+3);
+        last->data.str = (char*)s_realloc(last->data.str,sz+to-from+3);
         read = write = last->data.str+sz;
     }else{
-        c = s_malloc0(sizeof(*c));
+        c = (LwqqMsgContent*)s_malloc0(sizeof(*c));
         c->type = LWQQ_CONTENT_STRING;
-        c->data.str = s_malloc0(to-from+3);
+        c->data.str = (char*)s_malloc0(to-from+3);
         read = write = c->data.str;
     }
     //initial value
     strncpy(write,from,to-from);
     write[to-from]='\0';
     const char *ptr;
+    //fprintf(stderr, "bengin while\n");
     while(*read!='\0'){
         if(!trex_search(hs_regex,read,&begin,&end)){
             ptr = strchr(read,'\0');
@@ -229,13 +237,14 @@ static LwqqMsgContent* build_string_content(const char* from,const char* to,Lwqq
                     const char *end = strchr(value,'"');
                     if(strncmp(key,"size",4)==0){
                         int size = atoi(value);
-                        msg->f_size = sizemap(size);
+                        //msg->f_size = sizemap(size);
+                        msg->f_size = size;
                     }else if(strncmp(key,"color",5)==0){
                         strncpy(msg->f_color,value+1,6);
                         msg->f_color[6] = '\0';
                     }else if(strncmp(key,"face",4)==0){
                         s_free(msg->f_name);
-                        msg->f_name = s_malloc0(end-value+1);
+                        msg->f_name =(char*) s_malloc0(end-value+1);
                         strncpy(msg->f_name,value,end-value);
                         msg->f_name[end-value]='\0';
                     }
@@ -275,22 +284,68 @@ static LwqqMsgContent* build_face_content(const char* face,int len)
 static LwqqMsgContent* build_face_direct(int num)
 {
     LwqqMsgContent* c;
-    c = s_malloc0(sizeof(*c));
+    c = (LwqqMsgContent*)s_malloc0(sizeof(*c));
     c->type = LWQQ_CONTENT_FACE;
     c->data.face = num;
     return c;
 }
+
+static char *img_fileName(const char *file)
+{
+    //fprintf(stderr, "fileName:%s\n", basename(file));
+    return basename(file);
+}
+
+static size_t img_filesize(const char *file)
+{
+    struct stat buf;
+    if(stat(file, &buf)<0)
+    {
+        return 0;
+    }
+    return (size_t)buf.st_size;
+}
+
+static size_t img_filebuffer(const char *file, char *buffer)
+{
+    int fd;
+    if((fd = open(file, O_RDONLY)))
+    {
+
+        int readSize = 0;
+        int size = 0;
+        char *buf[1024];
+        bzero(buf, sizeof(buf));
+        while ((size = read(fd, buf, sizeof(buf))) > 0) {
+
+            memcpy(buffer+readSize, buf, size);
+            readSize += size;
+            bzero(buf, sizeof(buf));
+        }
+        //fprintf(stderr, "readsize:%d, totle:%d\n", readSize, img_filesize(file));
+        close(fd);
+        return readSize;
+    }else
+    {
+        //fprintf(stderr,"open file failed\n");
+        return 0;
+    }
+}
+
+
+
 int translate_message_to_struct(LwqqClient* lc,const char* to,const char* what,LwqqMsg* msg,int using_cface)
 {
     const char* ptr = what;
-    int img_id;
+    static int img_id = 1;
+    int face_id;
     LwqqMsgContent *c;
     const char* begin,*end;
     TRexMatch m;
     if(_regex==NULL) translate_global_init();
     TRex* x = _regex;
     LwqqMsgMessage* mmsg = (LwqqMsgMessage*)msg;
-    int translate_face=1;
+    int translate_face=0;
      
     while(*ptr!='\0'){
         c = NULL;
@@ -309,41 +364,88 @@ int translate_message_to_struct(LwqqClient* lc,const char* to,const char* what,L
             if(c) TAILQ_INSERT_TAIL(&mmsg->content,c,entries);
         }
         trex_getsubexp(x,0,&m);
-#if 0	
-        if(strstr(begin,"<IMG")==begin){
+#if 1
+        char fileName[512] = {0};
+        if(strstr(begin,"<img")==begin){
             //process ing img.
-            sscanf(begin,"<IMG ID=\"%d\">",&img_id);
-            PurpleStoredImage* simg = purple_imgstore_find_by_id(img_id);
+            //sscanf(begin,"<img src=\"%s\"/>",fileName);
+            sscanf(begin, "%*[^\"]\"%[^\"]", fileName);
+            char *imgBuffer = (char *)s_malloc(img_filesize(fileName));
+            img_filebuffer(fileName, imgBuffer);
             if(using_cface||msg->type == LWQQ_MS_GROUP_MSG){
-                c = lwqq_msg_fill_upload_cface(
-                        purple_imgstore_get_filename(simg),
-                        purple_imgstore_get_data(simg),
-                        purple_imgstore_get_size(simg));
+                c =( LwqqMsgContent*)s_malloc0(sizeof(*c));
+                c->type = LWQQ_CONTENT_CFACE;
+                c->data.cface.name = s_strdup(img_fileName(fileName));
+                c->data.cface.data = (char*)s_malloc(img_filesize(fileName));
+                memcpy(c->data.cface.data, imgBuffer,img_filesize(fileName));
+                c->data.cface.size = img_filesize(fileName);
+                char buf[12];
+                snprintf(buf,sizeof(buf),"%d",img_id++);
+                //record extra information to file_id
+                c->data.cface.file_id = s_strdup(buf);
             }else{
-                c = lwqq_msg_fill_upload_offline_pic(
-                        purple_imgstore_get_filename(simg), 
-                        purple_imgstore_get_data(simg), 
-                        purple_imgstore_get_size(simg));
+                c = ( LwqqMsgContent*)s_malloc0(sizeof(*c));
+                c->type = LWQQ_CONTENT_OFFPIC;
+                c->data.img.name = s_strdup(img_fileName(fileName));
+                c->data.img.data = (char*)s_malloc(img_filesize(fileName));
+                memcpy(c->data.img.data,imgBuffer,img_filesize(fileName));
+                c->data.img.size = img_filesize(fileName);
+//                c = lwqq_msg_fill_upload_offline_pic(
+//                            img_fileName(fileName),
+//                            img_filebuffer(fileName),
+//                            img_filesize(fileName));
             }
-        }else if(strstr(begin,"[FACE")==begin){
-            //processing face
-            sscanf(begin,"[FACE_%d]",&img_id);
-            c = build_face_direct(img_id);
-        }else if(strstr(begin,"[TOGGLEFACE]")==begin){
-            translate_face=!translate_face;
-        }else if(begin[0]=='&'){
-        }else if(begin[0]=='/'){
-            c = translate_face?build_face_content(m.begin, m.len):NULL;
-            if(c==NULL) c = build_string_content(begin, end, mmsg);
+       }else if(*begin==':'&&*(end-1)==':'){
+            if(strstr(begin,":face")==begin){
+                sscanf(begin,":face%d:",&face_id);
+                c = build_face_direct(face_id);
+            }else if(strstr(begin,":-face:")==begin){
+                translate_face=!translate_face;
+            }else{
+                //other :faces:
+                //c = translate_face?build_face_content(m.begin, m.len):NULL;
+                 c = NULL;
+                if(c==NULL) c = build_string_content(begin, end, mmsg);
+            }
+        }else if(begin[0]==':'){
+            if(strstr(begin,":face")==begin){
+                sscanf(begin,":face%d:",&face_id);
+                c = build_face_direct(face_id);
+                end =strstr(begin+1, ":") + 1;
+            }else if(strstr(begin,":-face:")==begin){
+                translate_face=!translate_face;
+            }else{
+                //other :faces:
+                //c = translate_face?build_face_content(m.begin, m.len):NULL;
+                 c = NULL;
+                if(c==NULL) c = build_string_content(begin, end, mmsg);
+            }
+//            //other :)
+//            c = translate_face?build_face_content(m.begin, m.len):NULL;
+//            if(c==NULL)
+//            {
+//                c = s_malloc0(sizeof(*c));
+//                c->type = LWQQ_CONTENT_STRING;
+//                c->data.str = s_strdup(what);
+//                end = what[strlen(what)+1];
+//                //fprintf(stderr, "malloc\n");
+//                if(end == '\0')
+//                    //fprintf(stderr, "0000\n");
+//            }
+
+       }else if(begin[0]=='&'){
         }else{
-            //other face
-            c = translate_face?build_face_content(m.begin,m.len):NULL;
+             //fprintf(stderr, "else :\n");
+//            //other face with no fix style
+            //c = translate_face?build_face_content(m.begin,m.len):NULL;
+             c = NULL;
             if(c==NULL) c = build_string_content(begin, end, mmsg);
         }
 #endif
         ptr = end;
         if(c!=NULL)
             lwqq_msg_content_append(mmsg, c);
+        //fprintf(stderr, "lwqq_msg_content_append\n");
     }
     return 0;
 }
@@ -385,7 +487,7 @@ char* translate_to_html_symbol(const char* s)
 void translate_struct_to_message(qq_account* ac, LwqqMsgMessage* msg, char* buf)
 {
     LwqqMsgContent* c;
-    char piece[24] = {0};
+    char piece[48] = {0};
     if(lwqq_bit_get(msg->f_style,LWQQ_FONT_BOLD)) strcat(buf,"<b>");
     if(lwqq_bit_get(msg->f_style,LWQQ_FONT_ITALIC)) strcat(buf,"<i>");
     if(lwqq_bit_get(msg->f_style,LWQQ_FONT_UNDERLINE)) strcat(buf,"<u>");
@@ -399,7 +501,7 @@ void translate_struct_to_message(qq_account* ac, LwqqMsgMessage* msg, char* buf)
     if(!(ac->flag&IGNORE_FONT_FACE)&&msg->f_name)
         snprintf(buf+strlen(buf),300,"face=\"%s\" ",msg->f_name);
     if(!(ac->flag&IGNORE_FONT_SIZE))
-        snprintf(buf+strlen(buf),300,"size=\"%d\" ",sizeunmap(msg->f_size));
+        snprintf(buf+strlen(buf),300,"size=\"%d\" ",msg->f_size);
     strcat(buf,">");
     
     TAILQ_FOREACH(c, &msg->content, entries) {
@@ -410,32 +512,64 @@ void translate_struct_to_message(qq_account* ac, LwqqMsgMessage* msg, char* buf)
             case LWQQ_CONTENT_FACE:
                 strcat(buf,translate_smile(c->data.face));
                 break;
-#if 0
+#if 1
             case LWQQ_CONTENT_OFFPIC:
+                //fprintf(stderr,"pic size:%d, file path:%s\n", c->data.img.size, c->data.img.file_path);
                 if(c->data.img.size>0){
-                    int img_id = purple_imgstore_add_with_id(c->data.img.data,c->data.img.size,NULL);
+                    KTemporaryFile *inkImage = new KTemporaryFile();
+                    inkImage->setPrefix("chatgif-");
+                    inkImage->setSuffix(".gif");
+                    inkImage->open();
+                    inkImage->write(c->data.img.data, c->data.img.size);
+                    inkImage->close();
+                    //int img_id = purple_imgstore_add_with_id(c->data.img.data,c->data.img.size,NULL);
                     //let it freed by purple
                     c->data.img.data = NULL;
                     //make it room to change num if necessary.
-                    snprintf(piece,sizeof(piece),"<IMG ID=\"%4d\">",img_id);
+                    snprintf(piece,sizeof(piece),"<img src=\"%s\" />",inkImage->fileName().toUtf8().constData());
+                    //fprintf(stderr, "url:%s\n", inkImage->fileName().toUtf8().constData());
                     strcat(buf,piece);
                 }else{
-                    strcat(buf,_("【PIC】"));
+                    if((msg->super.super.type==LWQQ_MS_GROUP_MSG&&ac->flag&NOT_DOWNLOAD_GROUP_PIC)){
+                        strcat(buf,_("【DISABLE PIC】"));
+                    }
+                    else if(c->data.img.url){
+                        format_append(buf, "<a href=\"%s\">%s</a>",
+                                c->data.img.url,
+                                _("【PIC】")
+                                );
+                    }
+                    else{
+                        strcat(buf,_("【PIC NOT FOUND】"));
+                    }
                 }
                 break;
-            case LWQQ_CONTENT_CFACE:
-                if(c->data.cface.size>0){
-                    int img_id = purple_imgstore_add_with_id(c->data.cface.data,c->data.cface.size,NULL);
-                    //let it freed by purple
-                    c->data.cface.data = NULL;
-                    snprintf(piece,sizeof(piece),"<IMG ID=\"%4d\">",img_id);
-                    strcat(buf,piece);
-                }else if(c->data.cface.direct_url){
-                    format_append(buf,"<IMG SRC=\"%s\">",c->data.cface.direct_url);
-                }else{
-                    strcat(buf,(msg->super.super.type==LWQQ_MS_GROUP_MSG&&ac->flag&NOT_DOWNLOAD_GROUP_PIC)?
-                            _("【DISABLE PIC】"):_("【PIC】"));
+        case LWQQ_CONTENT_CFACE:
+            if(c->data.cface.size>0){
+                KTemporaryFile *inkImage = new KTemporaryFile();
+                inkImage->setPrefix("chatgif-");
+                inkImage->setSuffix(".gif");
+                inkImage->open();
+                inkImage->write(c->data.img.data, c->data.img.size);
+                inkImage->close();
+                //let it freed by purple
+                c->data.cface.data = NULL;
+                snprintf(piece,sizeof(piece),"<img src=\"%s\"/>",inkImage->fileName().toUtf8().constData());
+                strcat(buf,piece);
+            }else{
+                if((msg->super.super.type==LWQQ_MS_GROUP_MSG&&ac->flag&NOT_DOWNLOAD_GROUP_PIC)){
+                    strcat(buf,_("【DISABLE PIC】"));
                 }
+                else if(c->data.cface.url){
+                    format_append(buf, "<a href=\"%s\">%s</a>",
+                                  c->data.cface.url,
+                                  _("【PIC】")
+                                  );
+                }
+                else{
+                    strcat(buf,_("【PIC NOT FOUND】"));
+                }
+            }
                 break;
 #endif
         }
@@ -632,8 +766,11 @@ const char* translate_smile(int face)
         if(buf[0]=='/') strcat(buf," ");
     }
     return buf;
+#else
+     static char buf[64];
+    snprintf(buf, sizeof(buf), ":face%d:",face);
 #endif
-    return NULL;
+    return buf;
 }
 
 void add_smiley(void* data,void* userdata)

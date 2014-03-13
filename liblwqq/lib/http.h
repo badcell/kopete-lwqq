@@ -28,7 +28,8 @@ typedef enum {
     LWQQ_HTTP_VERBOSE,
     LWQQ_HTTP_CANCELABLE,
     LWQQ_HTTP_MAXREDIRS,
-    LWQQ_HTTP_NOT_SET_COOKIE = 1<<7
+    LWQQ_HTTP_NOT_SET_COOKIE = 1<<7,
+	LWQQ_HTTP_MAX_LINK = 1000
 }LwqqHttpOption;
 /**
  * Lwqq Http request struct, this http object worked done for lwqq,
@@ -88,7 +89,7 @@ struct _LwqqHttpRequest {
     time_t last_prog;
 } ;
 
-typedef struct {
+typedef struct LwqqHttpHandle{
     struct {
         enum {
             LWQQ_HTTP_PROXY_NOT_SET = -1, //let curl auto set proxy
@@ -104,6 +105,7 @@ typedef struct {
     }proxy;
     int quit;
     int synced;
+	int ssl;
 }LwqqHttpHandle;
 
 LwqqHttpHandle* lwqq_http_handle_new();
@@ -117,6 +119,14 @@ do{\
     h->proxy.username = s_strdup(_username);\
     h->proxy.password = s_strdup(_password);\
 }while(0);
+
+#define lwqq_http_ssl(lc) (lwqq_get_http_handle(lc)->ssl)
+#define __SSL lwqq_http_ssl(lc)
+#define __H(url) __SSL?"https://"url:"http://"url
+#define WEBQQ_D_REF_URL (__SSL)?\
+							"https://d.web2.qq.com/cfproxy.html?v=20110331002&callback=1":\
+							"http://d.web2.qq.com/proxy.html?v=20110331002&callback=1"
+#define WEBQQ_D_HOST        __H("d.web2.qq.com")
 
 void lwqq_http_proxy_apply(LwqqHttpHandle* handle,LwqqHttpRequest* req);
 
@@ -157,12 +167,14 @@ void lwqq_http_cleanup(LwqqClient*lc);
 void lwqq_http_set_option(LwqqHttpRequest* req,LwqqHttpOption opt,...);
 /** regist http progressing callback */
 void lwqq_http_on_progress(LwqqHttpRequest* req,LWQQ_PROGRESS progress,void* prog_data);
+const char* lwqq_http_get_url(LwqqHttpRequest* req);
 
 char *lwqq_http_get_cookie(LwqqHttpHandle* h, const char *name);
 void  lwqq_http_set_cookie(LwqqHttpRequest *request, const char *name,const char* val);
 /** 
  * force stop a request 
  * require set LWQQ_HTTP_CANCELABLE option first
+ * invoke callback with failcode = LWQQ_EC_CANCELED
  */
 void lwqq_http_cancel(LwqqHttpRequest* req);
 

@@ -10,7 +10,6 @@ extern "C"
 }
 #include "config.h"
 #include "js.h"
-
 #ifdef ENABLE_NLS
 //#include <glib/gi18n.h>
 //#include <locale.h>
@@ -51,11 +50,18 @@ extern "C"
 #define QQ_ROOM_TYPE "type"
 #define QQ_ROOM_TYPE_QUN "qun"
 #define QQ_ROOM_TYPE_DISCU "discu"
-
+const int WEBQQ_GEN_DEBUG = 14210;
 typedef struct {
     enum {NODE_IS_BUDDY,NODE_IS_GROUP} type;
     const void* node;
 }index_node;
+
+typedef struct {
+    char *send_id;
+    time_t when;
+    char *what;
+}group_msg;
+
 typedef enum 
 {
     DISCONNECT,
@@ -71,8 +77,19 @@ typedef enum {
         DEBUG_FILE_SEND = 1<<4,
         REMOVE_DUPLICATED_MSG = 1<<5,
         QQ_DONT_EXPECT_100_CONTINUE = 1<<6,
-        NOT_DOWNLOAD_GROUP_PIC = 1<<7
+        NOT_DOWNLOAD_GROUP_PIC = 1<<7,
+        SEND_VISUALBILITY = 1<<8,
+        CACHE_TALKGROUP = 1<<9,
 }lwflags;
+
+//add friend and group info
+typedef struct add_info {
+    char* qq;
+    char* name;
+    char* uin;
+}add_info;
+
+enum ConType { Contact_Chat, Contact_Group, Contact_Discu, Contact_Session};
 
 typedef struct qq_account {
     LwqqClient* qq;

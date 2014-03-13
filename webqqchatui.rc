@@ -1,0 +1,22 @@
+<!DOCTYPE kpartgui>
+<kpartgui version="1" name="kopete_webqq_chat">
+    <MenuBar>
+        <Menu noMerge="1" name="file">
+                <Action name="WebqqBuzz" />
+                <Action name="Webqqimage" />
+                <Action name="WebqqShowInfo" />
+        </Menu>
+    </MenuBar>
+
+
+    <ToolBar name="statusToolBar">
+        <Action name="WebqqBuzz" />
+        <Action name="Webqqimage" />
+        <Action name="WebqqShowInfo" />
+    </ToolBar>
+
+    <ToolBar name="chatToolBar" fullWidth="true">
+            <Action name="Webqqimage" />
+     </ToolBar>
+
+</kpartgui>

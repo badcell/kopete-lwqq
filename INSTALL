@@ -1,0 +1,22 @@
+Basic Installation
+==================
+
+        KDE uses the cmake build system. The simple instructions for
+building kopete-qq are these commands (starting in kopete source directory):
+
+                        mkdir build && cd build
+                        cmake ..
+                        make
+                        sudo make install
+
+        This will not work unless necessary prerequisites are met. These are,
+in the order in which they should be built:
+
+                        kopete
+						kdesupport
+                        kdelibs
+                        kdepimlibs
+                        kdebase/runtime
+						libev
+						sqlite
+						js185

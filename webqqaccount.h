@@ -1,6 +1,7 @@
 /*
-    webqqaccount.h - Kopete Webqq Protocol
+    webqqaccount.h - Kopete Webqq  Account
 
+    Copyright (c) 2014      by Jun Zhang		 <jun.zhang@i-soft.com.cn>
     Copyright (c) 2003      by Will Stephenson		 <will@stevello.free-online.co.uk>
     Kopete    (c) 2002-2003 by the Kopete developers <kopete-devel@kde.org>
 
@@ -21,7 +22,8 @@
 //#include <kopeteaccount.h>
 #include <kopetepasswordedaccount.h>
 #include "webqqwebcamdialog.h"
-
+#include <QMap>
+#include <QList>
 #include "webqqbridgecallback.h"
 /*include the header of lwqq*/
 extern "C"
@@ -38,11 +40,13 @@ namespace Kopete
 	class Contact;
 	class MetaContact;
 	class StatusMessage;
+    class Message;
 }
 
 class WebqqProtocol;
-
-
+class QByteArray;
+class WebqqContact;
+typedef QList<group_msg> MsgDataList;
 /**
  * This represents an account connected to the webqq
  * @author Will Stephenson
@@ -58,11 +62,8 @@ public:
 	 */
 	virtual void fillActionMenu( KActionMenu *actionMenu );
 
-	/**
-	 * Creates a protocol specific Kopete::Contact subclass and adds it to the supplie
-	 * Kopete::MetaContact
-	 */
-	virtual bool createContact(const QString& contactId, Kopete::MetaContact* parentContact);
+
+
 	/**
 	 * Called when Kopete is set globally away
 	 */
@@ -76,15 +77,27 @@ public:
 	
 	
 	void initCategory();
-	
+    /**
+      *
+      */
+    enum Find_Type{Buddy, Group};
+    void find_add_contact(const QString name, Find_Type type ,QString groupName);
 	/*
 	* instance of LwqqClient
 	*/
 	LwqqClient *m_lc;
+
+    QString m_groupName;
+    QString m_contactName;
+    QString m_contactQQ;
+    QString m_contactNick;
 	/*
 	 * got a message, then send it to contact
 	 */
 	void buddy_message(LwqqClient* lc,LwqqMsgMessage* msg);
+    void group_message(LwqqClient* lc,LwqqMsgMessage* msg);
+    WebqqContact *contact(const QString &id);
+    bool isOffline();
 public slots:
 	/**
 	 * Called by the server when it has a message for us.
@@ -105,29 +118,45 @@ public slots:
 	void destoryLwqqAccount();
 	void friend_come(LwqqClient *lc, LwqqBuddy *buddy);
 	void group_come(LwqqClient* lc,LwqqGroup* group);
-	
-	void ac_need_verify2(LwqqClient* lc, LwqqVerifyCode* code);
-	void ac_login_stage_1(LwqqClient* lc,LwqqErrorCode err);
+    void discu_come(LwqqClient* lc,LwqqGroup* group);
+    void ac_need_verify2(LwqqClient* lc, LwqqVerifyCode *code);
+    void ac_login_stage_1(LwqqClient* lc, LwqqErrorCode *p_err);
 	void ac_login_stage_2(LwqqAsyncEvent* event,LwqqClient* lc);
 	void ac_login_stage_3(LwqqClient* lc);
 	void ac_login_stage_f(LwqqClient* lc);
 	void ac_friend_avatar(LwqqClient *lc, LwqqBuddy *buddy);
+    void ac_group_avatar(LwqqClient *lc, LwqqGroup *group);
+    void ac_group_members(LwqqClient *lc, LwqqGroup *group);
 	void ac_qq_msg_check(LwqqClient *lc);
-	
+    void ac_show_confirm_table(LwqqClient* lc, LwqqConfirmTable* table, add_info *info);
+    void ac_show_messageBox(msg_type type, const char *title, const char *message );
+    void ac_friend_come(LwqqClient* lc,LwqqBuddy* b);
+    void ac_rewrite_whole_message_list(LwqqAsyncEvent* ev,qq_account* ac,LwqqGroup* group);
+    void ac_qq_set_group_name(LwqqGroup* group);
+    void ac_display_user_info(qq_account* ac, LwqqBuddy* b, char* who);
 	void slotReceivedInstanceSignal(CallbackObject cb);
-	
+    void blist_change(LwqqClient* lc,LwqqMsgBlistChange* blist);
 	void pollMessage();
-	void afterLogin();
+    void afterLogin(LwqqClient* lc);
+    /**
+     * get group or disu all members
+     */
+    void slotGetGroupMembers(QString id);
 	
-	
+    void slotBlock(QString id);
 
+    void slotGetUserInfo(QString id, ConType type);
 protected:
 	/**
 	 * This simulates contacts going on and offline in sync with the account's status changes
 	 */
 	void updateContactStatus();
-
-
+    /**
+     * Creates a protocol specific Kopete::Contact subclass and adds it to the supplie
+     * Kopete::MetaContact
+     */
+    virtual bool createContact(const QString &contactId,  Kopete::MetaContact *parentContact);
+    bool createChatSessionContact( const QString &id, const QString &name );
 protected slots:
 	/**
 	 * Change the account's status.  Called by KActions and internally.
@@ -153,7 +182,9 @@ protected slots:
 	 * change the account's status, called by Kactions and internally.
 	 */
 	void slotGoHidden();
-	
+
+    void slotChangeNick();
+
 private: 
     /*
      *  use lwqq library login
@@ -163,46 +194,72 @@ private:
      * use lwqq library logout
      */
     void logout();
-    
+    /*
+     * init client events
+     */
+    void init_client_events(LwqqClient* lc);
+    /*
+     * clean all contact
+     */
+    void cleanAll_contacts();
+
+    void whisper_message(LwqqClient* lc,LwqqMsgMessage* mmsg);
+
+    void receivedGroupMessage(LwqqGroup* group, LwqqMsgMessage *msg);
+
+    bool group_is_qun(LwqqGroup *group);
+    void rewrite_group_msg(const QString &id);
+    QString stransMsg(const QString &message);
 
     QString m_username;
     QString m_password;
     
     Kopete::OnlineStatus m_targetStatus; 
     /* lwqq async option */
-    LwqqAction m_async_opt; 
+    LwqqEvents m_async_opt;
     WebqqProtocol *m_protocol;
     
     QTimer *pollTimer;
-
+    QByteArray avatarData;
+    add_info *m_addInfo;
+    QMap<QString, MsgDataList> m_msgMap;
     /*called by login stage1*/
     //void login_stage_2(LwqqAsyncEvent* ev,LwqqClient* lc);
 };
 
-static void cb_need_verify2(LwqqClient* lc,LwqqVerifyCode* code);
-static void cb_login_stage_1(LwqqClient* lc,LwqqErrorCode err);
+static void cb_need_verify2(LwqqClient* lc, LwqqVerifyCode **code);
+static void cb_login_stage_1(LwqqClient* lc, LwqqErrorCode *err);
 static void cb_login_stage_2(LwqqAsyncEvent* event,LwqqClient* lc);
 static void cb_login_stage_3(LwqqClient* lc);
 static void cb_login_stage_f(LwqqClient* lc);
 static void cb_friend_avatar(LwqqClient *lc, LwqqBuddy *buddy);
+static void cb_group_avatar(LwqqClient *lc, LwqqGroup *group);
+static void cb_group_members(LwqqClient *lc, LwqqGroup *group);
 static void cb_qq_msg_check(LwqqClient* lc);
-
-static void cb_friend_come(LwqqClient* lc,LwqqBuddy* buddy);
-static void cb_group_come(LwqqClient* lc,LwqqGroup* group);
+static void cb_show_confirm_table(LwqqClient* lc, LwqqConfirmTable* table, add_info *info);
+static void cb_show_messageBox(msg_type type, const char *title, const char *message);
+static void cb_friend_come(LwqqClient* lc, LwqqBuddy **buddy);
+static void cb_group_come(LwqqClient* lc, LwqqGroup **group);
 static void cb_lost_connection(LwqqClient* lc);
-static void cb_upload_content_fail(LwqqClient* lc,const char* serv_id,LwqqMsgContent* c,int err);
-static void cb_delete_group_local(LwqqClient* lc,const LwqqGroup* g);
-static void cb_flush_group_members(LwqqClient* lc,LwqqGroup* g);
-
-
-
+static void cb_upload_content_fail(LwqqClient* lc, const char **serv_id, LwqqMsgContent **c, int err);
+static void cb_delete_group_local(LwqqClient* lc, const LwqqGroup **g);
+static void cb_flush_group_members(LwqqClient* lc, LwqqGroup **g);
+static void cb_return_friend_come(LwqqClient* lc,LwqqBuddy* b);
+static void cb_rewrite_whole_message_list(LwqqAsyncEvent* ev,qq_account* ac,LwqqGroup* group);
+static void cb_qq_set_group_name(LwqqGroup* group);
+static void cb_display_user_info(qq_account* ac, LwqqBuddy* b, char *who);
+static void set_cgroup_block(LwqqConfirmTable* ct,LwqqClient* lc,LwqqGroup* g);
+static void confirm_table_yes(LwqqConfirmTable* table, const char *input, LwqqAnswer answer);
+static void confirm_table_no(LwqqConfirmTable* table,const char *input);
+static void system_message(LwqqClient* lc,LwqqMsgSystem* system,LwqqBuddy* buddy);
 static char* hash_with_local_file(const char* uin,const char* ptwebqq,void* js);
 static char* hash_with_remote_file(const char* uin,const char* ptwebqq,void* js);
 static void friends_valid_hash(LwqqAsyncEvent* ev,LwqqHashFunc last_hash);
-
+void qq_add_buddy( LwqqClient* lc, const char *username, const char *message);
+static void add_friend(LwqqClient* lc,LwqqConfirmTable* c,LwqqBuddy* b,char* message);
 static void get_friends_info_retry(LwqqClient* lc,LwqqHashFunc hashtry);
-
-
+static void write_buddy_to_db(LwqqClient* lc,LwqqBuddy* b);
+static void display_self_longnick(LwqqClient* lc);
 Kopete::OnlineStatus statusFromLwqqStatus(LwqqStatus status);
 
 

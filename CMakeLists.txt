@@ -20,6 +20,7 @@ include(CheckFunctionExists)
 include(CheckLibraryExists)
 include(CheckPrototypeExists)
 include(CheckTypeSize)
+add_definitions( -DKDE_DEFAULT_DEBUG_AREA=14210 )
 
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(LIBJS REQUIRED mozjs185)
@@ -68,15 +69,17 @@ ${KOPETE_BINARY_DIR}/lib
 
 
 add_subdirectory( icons ) 
+add_subdirectory( emoticons ) 
 
 
 include_directories( 
-#${KOPETE_INCLUDES}
+#kopete
 ${KOPETE_INCLUDE_DIRS} 
 ${KOPETE_INCLUDE_DIRS}/ui/
 ${CMAKE_CURRENT_SOURCE_DIR}/ui/ 
 ${CMAKE_CURRENT_SOURCE_DIR}/liblwqq/lib/
 )
+
 
 
 ########### next target ###############
@@ -91,6 +94,10 @@ set(kopete_webqq_PART_SRCS
    webqqbridgecallback.cpp
    webqqloginverifywidget.cpp
    webqquserinfoform.cpp
+   webqqchatsession.cpp
+   webqqdiscuchatsession.cpp
+   webqqgroupchatsession.cpp
+   webqqshowgetinfo.cpp
    js.cpp
    translate.cpp
    trex.cpp
@@ -129,3 +136,4 @@ install(TARGETS kopete_webqq  DESTINATION ${PLUGIN_INSTALL_DIR})
 ########### install files ###############
 
 install( FILES kopete_webqq.desktop  DESTINATION ${SERVICES_INSTALL_DIR})
+install( FILES webqqdiscuui.rc webqqchatui.rc webqqgroupui.rc  DESTINATION ${DATA_INSTALL_DIR}/kopete_webqq)

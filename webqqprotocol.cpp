@@ -1,6 +1,7 @@
 /*
     webqqprotocol.cpp - Kopete Webqq Protocol
 
+    Copyright (c) 2014      by Jun Zhang             <jun.zhang@i-soft.com.cn>
     Copyright (c) 2003      by Will Stephenson		 <will@stevello.free-online.co.u>
     Kopete    (c) 2002-2003 by the Kopete developers <kopete-devel@kde.org>
 
@@ -73,6 +74,7 @@ WebqqProtocol::WebqqProtocol( QObject* parent, const QVariantList &/*args*/ )
 	kDebug( 14210 ) ;
 
 	s_protocol = this;
+    setCapabilities( FullRTF);
 }
 
 WebqqProtocol::~WebqqProtocol()

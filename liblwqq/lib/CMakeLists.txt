@@ -15,8 +15,10 @@ set(LWQQ_LIST
     async.c
     http.c
     lwdb.c
+	lwjs.c
     )
 set(LWQQ_HEADER
+	queue.h
     async.h
     async_impl.h
     http.h
@@ -31,26 +33,28 @@ set(LWQQ_HEADER
     lwqq.h
     vplist.h
     swsqlite.h
+    lwjs.h
     )
 add_definitions(-Wall )
 
 include_directories(
-  ${ZLIB_INCLUDE_DIRS}
-  ${CURL_INCLUDE_DIRS}
-  ${SQLITE_INCLUDE_DIRS}
-  ${PROJECT_BINARY_DIR}
-  )
+    ${ZLIB_INCLUDE_DIRS}
+    ${CURL_INCLUDE_DIRS}
+    ${SQLITE_INCLUDE_DIRS}
+    ${MOZJS_INCLUDE_DIRS}
+    ${PROJECT_BINARY_DIR}
+    )
 
 if(UNIX)
   set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} -fno-strict-aliasing")
-  set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -DUSE_DEBUG=1 ")
+  set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} ")
   add_definitions(-fPIC)
 endif(UNIX)
 
 if(WIN32)
   set(LWQQ_LIST ${LWQQ_LIST} win32.c )
   add_definitions(-D_GNU_SOURCE=1)
-  set(LWQQ_OTHER_LIBS ${LWQQ_OTHER_LIBS} pthread ws2_32)
+  set(LWQQ_OTHER_LIBS ${LWQQ_OTHER_LIBS} ws2_32)
 endif(WIN32)
 
 if(SSL)
@@ -59,27 +63,36 @@ endif(SSL)
 
 if(WITH_LIBEV)
     include_directories(${EV_INCLUDE_DIRS})
-    set(LWQQ_OTHER_LIBS ${LWQQ_OTHER_LIBS} ${EV_LIBRARIES})
+    set(LWQQ_OTHER_LIBS ${EV_LIBRARIES} ${LWQQ_OTHER_LIBS})
 endif()
 if(WITH_LIBUV)
     include_directories(${UV_INCLUDE_DIRS})
     set(LWQQ_OTHER_LIBS ${LWQQ_OTHER_LIBS} ${UV_LIBRARIES})
 endif()
 
-if(STATIC_LIBRARY)
-    add_library(lwqq STATIC ${LWQQ_LIST} )
-else()
-    add_library(lwqq SHARED ${LWQQ_LIST} )
-endif()
-
+#add_library(lwqq-static STATIC ${LWQQ_LIST} )
+#set_target_properties(lwqq-static PROPERTIES OUTPUT_NAME lwqq)
+add_library(lwqq SHARED ${LWQQ_LIST} )
 target_link_libraries(lwqq
-  ${SQLITE_LIBRARIES}
-  ${CURL_LIBRARIES}
-  ${ZLIB_LIBRARIES}
-  ${LWQQ_OTHER_LIBS}
-  )
+    ${SQLITE_LIBRARIES}
+    ${CURL_LIBRARIES}
+    ${ZLIB_LIBRARIES}
+    ${MOZJS_LIBRARIES}
+    ${LWQQ_OTHER_LIBS}
+	-Wl,-Bdynamic pthread
+    )
+
+#target_link_libraries(lwqq-static
+#    ${SQLITE_LIBRARIES}
+#    ${CURL_LIBRARIES}
+#    ${ZLIB_LIBRARIES}
+#    ${MOZJS_LIBRARIES}
+#    ${LWQQ_OTHER_LIBS}
+#	-Wl,-Bdynamic pthread
+#    )
 
 if(LWQQ_INSTALL)
-INSTALL(TARGETS lwqq DESTINATION lib)
-#INSTALL(FILES ${LWQQ_HEADER} DESTINATION include/lwqq)
+install(TARGETS lwqq DESTINATION lib)
+#install(TARGETS lwqq-static DESTINATION lib)
+#install(FILES ${LWQQ_HEADER} DESTINATION include/lwqq)
 endif()

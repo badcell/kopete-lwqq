@@ -7,7 +7,6 @@
  * 
  * 
  */
-#define WITH_LIBEV
 
 #include <string.h>
 #include <unistd.h>
@@ -17,8 +16,9 @@
 #include <stdio.h>
 #include <libgen.h>
 #include <pthread.h>
- 
+
 #include "lwqq.h"
+#include "lwjs.h"
 
 #ifdef WIN32
 #include <windows.h>
@@ -112,26 +112,14 @@ static int list_f(int argc, char **argv)
 {
     char buf[1024] = {0};
 
-    printf("try to call test\n");
-    test();
-    
     /** argv may like:
      * 1. {"list", "all"}
      * 2. {"list", "244569070"}
      */
-    if (argc != 2) {
-        return 0;
-    }
-    printf("hahha\n");
-    LwqqErrorCode err;
-    lwqq_info_get_all_friend_qqnumbers(lc,&err);
-    
-    if (!strcmp(argv[1], "all")) {
+    if (argc==1 || !strcmp(argv[1], "all")) {
         /* List all buddies */
         LwqqBuddy *buddy;
-	printf("try to print all buddies\n");
         LIST_FOREACH(buddy, &lc->friends, entries) {
-	  printf("one buddy, uin is %s\n", buddy->uin);
             if (!buddy->uin) {
                 /* BUG */
                 return 0;
@@ -163,7 +151,7 @@ static int list_f(int argc, char **argv)
                 break;
             }
         }
-    } 
+    }
 	
 
     return 0;
@@ -193,22 +181,20 @@ static char *get_prompt(void)
 static LwqqErrorCode cli_login()
 {
     LwqqErrorCode err;
-    printf("start to cli_login\n");
 
-//    LWQQ_SYNC_BEGIN(lc);
+    LWQQ_SYNC_BEGIN(lc);
     lwqq_login(lc,LWQQ_STATUS_ONLINE, &err);
-    if (err != LWQQ_EC_OK) {
 
-    //    goto failed;
+    if (err != LWQQ_EC_OK) {
+        goto failed;
     }
 
-//    LWQQ_SYNC_END(lc);
-//    return err;
-    return LWQQ_EC_OK;
-  
-//failed:
-//   LWQQ_SYNC_END(lc);
-   return LWQQ_EC_ERROR;
+    LWQQ_SYNC_END(lc);
+    return err;
+
+failed:
+    LWQQ_SYNC_END(lc);
+    return LWQQ_EC_ERROR;
 }
 
 static void cli_logout(LwqqClient *lc)
@@ -223,50 +209,6 @@ static void cli_logout(LwqqClient *lc)
     }
 }
 
-void cb_login_stage_3(LwqqClient *lc)
-{
-  printf("stage3* *******\n");
-}
-
-
-void test()
-{
-    printf("**************test_2\n");
-    
-#ifdef WITH_LIBEV
-printf("********has define WITH_LIBEV\n");
-#endif
-
-#ifdef WITH_LIBUV
-printf("********has define WITH_LIBUV\n");
-#endif
-
-#ifndef WITH_LIBEV
-printf("8888888 no WITH_LIBEV\n");
-#endif
-
-    LwqqAsyncEvset* set = lwqq_async_evset_new();
-    LwqqAsyncEvent* ev;
-    ev = lwqq_info_get_discu_name_list(lc); 
-    lwqq_async_evset_add_event(set,ev);
-   // ev = lwqq_info_get_online_buddies(lc,NULL);
-   // lwqq_async_evset_add_event(set,ev);
-    
-//    qq_account* ac = lwqq_client_userdata(lc);
-  /*  
-    const char* alias = purple_account_get_alias(ac->account);
-    if(alias == NULL){
-        ev = lwqq_info_get_friend_detail_info(lc,lc->myself);
-        lwqq_async_evset_add_event(set,ev);
-    }
-*/
-  lwqq_async_add_event_listener(ev, _C_(p,cb_login_stage_3,lc));
- //   lwqq_async_add_evset_listener(set,_C_(p,cb_login_stage_3,lc));
-    printf("first\n");
-}
-
-
-
 static void usage()
 {
     fprintf(stdout, "Usage: lwqq-cli [options]...\n"
@@ -277,7 +219,7 @@ static void usage()
             "      Set username(qqnumber)\n"
             "  -p, --pwd\n"
             "      Set password\n"
-            "  -h, --help\n" 
+            "  -h, --help\n"
             "      Print help and exit\n"
         );
 }
@@ -334,40 +276,20 @@ static void handle_new_msg(LwqqRecvMsg *recvmsg)
     s_free(recvmsg);
 }
 
-static void *recvmsg_thread(void *list)
-{
-    LwqqRecvMsgList *l = (LwqqRecvMsgList *)list;
-
-    /* Poll to receive message */
-    lwqq_msglist_poll(l, 0);
-
-    /* Need to wrap those code so look like more nice */
-    while (1) {
-        LwqqRecvMsg *recvmsg;
-        pthread_mutex_lock(&l->mutex);
-        if (TAILQ_EMPTY(&l->head)) {
-            /* No message now, wait 100ms */
-            pthread_mutex_unlock(&l->mutex);
-            usleep(100000);
-            continue;
-        }
-        recvmsg = TAILQ_FIRST(&l->head);
-        TAILQ_REMOVE(&l->head,recvmsg, entries);
-        pthread_mutex_unlock(&l->mutex);
-        handle_new_msg(recvmsg);
-		fflush(stdout);
-    }
-
-    pthread_exit(NULL);
-    return NULL;
-}
-
 static void *info_thread(void *lc)
 {
-    LwqqErrorCode err;
-    lwqq_info_get_friends_info(lc,NULL,&err);
+#ifdef WITH_MOZJS
+    LwqqHttpRequest* req = lwqq_http_request_new("http://pidginlwqq.sinaapp.com/hash.js");
+    req->do_request(req,0,NULL);
+    const char* hashjs = req->response;
+    lwqq_js_t* js = lwqq_js_init();
+    lwqq_js_load_buffer(js,hashjs);
+    lwqq_info_get_friends_info(lc,(LwqqHashFunc)lwqq_js_hash,js);
+    lwqq_js_close(js);
+#else
+    lwqq_info_get_friends_info(lc,NULL,NULL);
+#endif
 
-    pthread_exit(NULL);
     return NULL;
 }
 
@@ -447,8 +369,22 @@ static void command_loop()
     }
 }
 
-static void need_verify2(LwqqClient* lc,LwqqVerifyCode* code)
+static void received_msg(LwqqRecvMsgList* l)
 {
+
+    LwqqRecvMsg *recvmsg;
+    recvmsg = TAILQ_FIRST(&l->head);
+    while(!TAILQ_EMPTY(&l->head)){
+        pthread_mutex_lock(&l->mutex);
+        TAILQ_REMOVE(&l->head,recvmsg, entries);
+        pthread_mutex_unlock(&l->mutex);
+        handle_new_msg(recvmsg);
+        fflush(stdout);
+    }
+}
+static void need_verify2(LwqqClient* lc,LwqqVerifyCode** p_code)
+{
+	LwqqVerifyCode* code = *p_code;
     #ifdef WIN32
     const char *dir = NULL;
     
@@ -462,8 +398,8 @@ static void need_verify2(LwqqClient* lc,LwqqVerifyCode* code)
     lwqq_util_save_img(code->data,code->size,fname,dir);
 
     lwqq_log(LOG_NOTICE,"Need verify code to login, please check "
-            "image file %s%s, and input below.\n",
-            dir?:"",fname);
+            "image file %s%c%s, and input below.\n",
+            dir?:"",dir?'/':' ',fname);
     printf("Verify Code:");
 	fflush(stdout);
     scanf("%s",vcode);
@@ -475,11 +411,8 @@ static void log_direct_flush(int l,const char* str)
 {
 	fprintf(stderr,"%s\n",str);
 	fflush(stderr);
+    fflush(stdout);
 }
-
-static LwqqAction act = {
-    .need_verify2 = need_verify2
-};
 
 int main(int argc, char *argv[])
 {
@@ -488,9 +421,7 @@ int main(int argc, char *argv[])
 
     char *qqnumber = NULL, *password = NULL;
     LwqqErrorCode err;
-    int i, c, e = 0;
-    pthread_t tid[2];
-    pthread_attr_t attr[2];
+    int c, e = 0;
     
     if (argc == 1) {
         usage();
@@ -538,7 +469,10 @@ int main(int argc, char *argv[])
     
     lwqq_log_set_level(4);
     lc = lwqq_client_new(qqnumber, password);
-    lc->action = &act;
+	lwqq_add_event(lc->events->need_verify,
+			_C_(2p,need_verify2,lc, &lc->args->vf_image));
+    lwqq_add_event(lc->events->poll_msg,
+        _C_(p,received_msg,lc->msg_list));
     if (!lc) {
         lwqq_log(LOG_NOTICE, "Create lwqq client failed\n");
         return -1;
@@ -554,22 +488,16 @@ int main(int argc, char *argv[])
 
     lwqq_log(LOG_NOTICE, "Login successfully\n");
 
-    /* Initialize thread */
-    for (i = 0; i < 2; ++i) {
-        pthread_attr_init(&attr[i]);
-        pthread_attr_setdetachstate(&attr[i], PTHREAD_CREATE_DETACHED);
-    }
-
     /* Create a thread to receive message */
- //   pthread_create(&tid[0], &attr[0], recvmsg_thread, lc->msg_list);
-
-    /* Create a thread to update friend info */
-//    pthread_create(&tid[1], &attr[1], info_thread, lc);
+    lwqq_msglist_poll(lc->msg_list,0);
+    info_thread(lc);
 
     /* Enter command loop  */
     command_loop();
+    //while(1);
     
     /* Logout */
+    lwqq_msglist_close(lc->msg_list);
     cli_logout(lc);
     lwqq_client_free(lc);
     return 0;

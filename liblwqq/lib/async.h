@@ -151,6 +151,7 @@ void lwqq_async_queue_rm(LwqqAsyncQueue* queue,void* func);
  * @see LwqqClient::dispatch
  */
 void lwqq_async_dispatch(LwqqCommand cmd);
+void lwqq_async_dispatch_delay(LwqqCommand cmd,unsigned long timeout);
 //initialize lwqq client with default dispatch function
 void lwqq_async_init(LwqqClient* lc);
 /** 
@@ -158,6 +159,13 @@ void lwqq_async_init(LwqqClient* lc);
  * NOTE!! you must call lwqq_http_global_free first !!
  * */
 void lwqq_async_global_quit();
+
+
+//=========================PLUGIN API===========================//
+typedef struct LwqqPlugin{
+	void (*init)(struct LwqqPlugin* pl,LwqqClient* lc);
+	void (*remove)(struct LwqqPlugin* pl,LwqqClient* lc);
+}LwqqPlugin;
 
 
 //=========================LOW LEVEL EVENT LOOP API====================//

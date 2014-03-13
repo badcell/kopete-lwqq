@@ -17,7 +17,8 @@ static int request_captcha_back(LwqqHttpRequest* req,LwqqVerifyCode* code)
     code->data = req->response;
     code->size = req->resp_len;
     req->response = NULL;
-    lc->action->need_verify2(lc,code);
+	lc->args->vf_image = code;
+	vp_do_repeat(lc->events->need_verify, NULL);
 done:
     lwqq_http_request_free(req);
     return err;
@@ -27,7 +28,9 @@ LwqqAsyncEvent* lwqq__request_captcha(LwqqClient* lc,LwqqVerifyCode* c)
 {
     if(!lc||!c) return NULL;
     char url[512];
+    c->lc = lc;
 
+    srand48(time(NULL));
     double random = drand48();
     snprintf(url,sizeof(url),"%s/getimage?"
             "aid=1003901&%.16lf",

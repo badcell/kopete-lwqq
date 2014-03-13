@@ -13,28 +13,34 @@
 
 #include <pthread.h>
 #include <stdarg.h>
+#include "lwqq-config.h"
 #include "queue.h"
 #include "vplist.h"
 
 #define LWQQ_MAGIC 0x4153
-
-#define USE_MSG_THREAD 1
-
-#ifndef USE_DEBUG
-#define USE_DEBUG 0
-#endif
 
 #define LWQQ_DEFAULT_CATE "My Friends"
 #define LWQQ_PASSERBY_CATE "Passerby"
 #define LWQQ_RETRY_VALUE 3
 #define LWQQ_CACHE_DIR "/tmp/lwqq"
 
+#ifdef UNUSED
+#elif defined(__GNUC__)
+# 	define UNUSED(x) UNUSED_ ## x __attribute__((unused))
+#else
+#	define UNUSED(x) x
+#endif
+
+
+struct LwqqHttpHandle;
+struct LwqqMsgContent;
+struct LwqqArguments;
+struct LwqqEvents;
 
 typedef struct _LwqqHttpRequest LwqqHttpRequest;
 typedef LIST_HEAD(,LwqqAsyncEntry) LwqqAsyncQueue;
-struct LwqqMsgContent;
-struct LwqqAction;
 
+typedef struct LwqqClient LwqqClient;
 
 typedef VP_DISPATCH DISPATCH_FUNC;
 typedef VP_CALLBACK CALLBACK_FUNC;
@@ -56,6 +62,16 @@ typedef int (*LWQQ_PROGRESS)(void* data,size_t now,size_t total);
  *
  * there are some old LWQQ head that should be WEBQQ
  */
+
+typedef enum {
+	LWQQ_WITH_LIBEV = 1<<0,
+	LWQQ_WITH_LIBUV = 1<<1,
+	LWQQ_WITH_SQLITE = 1<<2,
+	LWQQ_WITH_MOZJS = 1<<3,
+	LWQQ_WITH_SSL = 1<<4
+}LwqqFeatures;
+
+extern const LwqqFeatures lwqq_features;
 
 typedef enum {
     LWQQ_STATUS_LOGOUT = 0,
@@ -101,6 +117,7 @@ typedef enum {
     LWQQ_MALE = 2
 }LwqqGender;
 typedef enum {
+    LWQQ_DEL_KEEP_OTHER = 1,/* delete buddy and keep myself from other buddy list */
     LWQQ_DEL_FROM_OTHER = 2/* delete buddy and remove myself from other buddy list */
 }LwqqDelFriendType;
 
@@ -233,9 +250,13 @@ typedef struct LwqqGroup {
     char *did;                   /**< QQ Discu id */
     };
     union{
-    char *account;               /** < QQ Group number */
+    char *account;               /** < Group: QQ number 
+                                        Discu: (with lwdb) the only one and stable key reference
+                                               (without lwdb) equal to info_seq;
+                                 */
     char *qq;                    /** < QQ number */
     };
+    char *info_seq;              /** < avaliable for discu */
     char *code;    
     char *markname;              /** < QQ Group mark name */
 
@@ -269,21 +290,23 @@ typedef struct LwqqGroup {
 typedef struct LwqqVerifyCode {
     char *str;
     char *uin;
+    //{image
     char *data;
     size_t size;
+    //}
+    LwqqClient* lc;
     LwqqCommand cmd;
 } LwqqVerifyCode ;
 
 typedef enum {LWQQ_NO,LWQQ_YES,LWQQ_EXTRA_ANSWER,LWQQ_IGNORE} LwqqAnswer;
 #define LWQQ_ALLOW_AND_ADD LWQQ_EXTRA_ANSWER
 
+
 /* LwqqClient API */
-typedef struct LwqqClient {
+struct LwqqClient {
     char *username;             /**< Username */
     char *password;             /**< Password */
-    LwqqBuddy *myself;          /**< Myself */
     char *version;              /**< WebQQ version */
-    LwqqVerifyCode *vc;         /**< Verify Code */
     char *clientid;
     char *seskey;
     char *cip;
@@ -295,11 +318,15 @@ typedef struct LwqqClient {
     char *gface_key;                  /**< use at cface */
     char *gface_sig;                  /**<use at cfage */
     char *login_sig;
-    const struct LwqqAction* action;
-
-    LwqqStatus stat;
     char *error_description;
     char *new_ptwebqq;              /**< this only used when relogin */
+    LwqqBuddy *myself;          /**< Myself */
+    LwqqVerifyCode *vc;         /**< Verify Code */
+	struct LwqqEvents * events;
+	struct LwqqArguments * args;
+    void (*dispatch)(LwqqCommand,unsigned long timeout);
+
+    LwqqStatus stat;
 
     LwqqFriendList friends; /**< QQ friends */
     LIST_HEAD(, LwqqFriendCategory) categories; /**< QQ friends categories */
@@ -316,11 +343,11 @@ typedef struct LwqqClient {
     /** non data area **/
 
     void* data;                     /**< user defined data*/
-    void (*dispatch)(LwqqCommand);
 
     int magic;          /**< 0x4153 **/
-} LwqqClient;
+};
 #define lwqq_client_userdata(lc) (lc->data)
+#define lwqq_client_dispatch(lc,cmd) (lc->dispatch(cmd,10))
 
 /**
  * this is used for some long http request actions chain. 
@@ -328,37 +355,60 @@ typedef struct LwqqClient {
  * and most of async option require gui display some information.
  *
  */
-typedef struct LwqqAction {
+typedef struct LwqqEvents
+{
+	/** for test only**/
+	LwqqCommand start_login;
     /**
      * this is login complete .whatever successed or failed
      * except need verify code
      */
-    void (*login_complete)(LwqqClient* lc,LwqqErrorCode ec);
+	LwqqCommand login_complete;
     /* this is very important when poll message come */
-    void (*poll_msg)(LwqqClient* lc);
+	LwqqCommand poll_msg;
     /* this is poll lost after recv retcode 112 or 108 */
-    void (*poll_lost)(LwqqClient* lc);
+	LwqqCommand poll_lost;
     /* this is upload content failed such as lwqq offline pic */
-    void (*upload_fail)(LwqqClient* lc,const char* serv_id,struct LwqqMsgContent* c,int extra_reason);
+	LwqqCommand upload_fail;
     /* this is you confirmed a friend request 
      * you should add buddy to gui level.
      */
-    void (*new_friend)(LwqqClient* lc,LwqqBuddy* buddy);
-    void (*new_group)(LwqqClient* lc,LwqqGroup* g);
-    void (*need_verify2)(LwqqClient* lc,LwqqVerifyCode* code);
+	LwqqCommand new_friend;
+	LwqqCommand new_group;
+	LwqqCommand need_verify;
     /* this called when successfully delete group from server
      * and the last chance to visit group
      * do not delete group in this function
      * it would deleted later.
      */
-    void (*delete_group)(LwqqClient* lc,const LwqqGroup* g);
+	LwqqCommand delete_group;
     /** this called when group member changes
      * you need flush displayed group member
      */
-    void (*group_members_chg)(LwqqClient* lc,LwqqGroup* g);
-}LwqqAction;
+	LwqqCommand group_member_chg;
+	/** set this to involve hash_function */
+	LwqqCommand hash_func;
+}LwqqEvents;
 
-#define lwqq_call_action(lc,act)  if(lc->action->act) lc->action->act
+LwqqEvents* lwqq_client_get_events(LwqqClient* lc);
+
+typedef struct LwqqArguments
+{
+	LwqqErrorCode login_ec;
+	LwqqBuddy* buddy;
+	LwqqGroup* group;
+	LwqqVerifyCode* vf_image;
+	const LwqqGroup* deleted_group;
+	const char* serv_id;
+	struct LwqqMsgContent* content;
+	LwqqErrorCode err;
+	char* hash_result;
+}LwqqArguments;
+
+LwqqArguments* lwqq_client_get_args(LwqqClient* lc);
+
+void lwqq_add_event_listener(LwqqCommand* event,LwqqCommand cmd);
+#define lwqq_add_event(event,cmd) lwqq_add_event_listener(&event,cmd);
 
 /* Struct defination end */
 
@@ -390,7 +440,7 @@ void lwqq_vc_free(LwqqVerifyCode *vc);
  * @param client LwqqClient instance
  */
 void lwqq_client_free(LwqqClient *client);
-void* lwqq_get_http_handle(LwqqClient* lc);
+struct LwqqHttpHandle* lwqq_get_http_handle(LwqqClient* lc);
 
 /* LwqqClient API end */
 
@@ -431,6 +481,7 @@ LwqqBuddy* lwqq_buddy_find_buddy_by_name(LwqqClient* lc,const char* name);
 
 
 LwqqFriendCategory* lwqq_category_find_by_name(LwqqClient* lc,const char* name);
+LwqqFriendCategory* lwqq_category_find_by_id(LwqqClient* lc,int index);
 
 /* LwqqBuddy API END*/
 
@@ -460,8 +511,9 @@ LwqqGroup *lwqq_group_new(int type);
  * @return A LwqqGroup instance
  */
 LwqqGroup *lwqq_group_find_group_by_gid(LwqqClient *lc, const char *gid);
-LwqqGroup* lwqq_group_find_group_by_qqnumber(LwqqClient* lc,const char* qqnumber);
 #define lwqq_discu_find_discu_by_did(lc,did) lwqq_group_find_group_by_gid(lc,did);
+LwqqGroup* lwqq_group_find_group_by_qqnumber(LwqqClient* lc,const char* qqnumber);
+#define lwqq_group_find_group_by_account(lc,acc) lwqq_group_find_group_by_qqnumber(lc,acc)
 
 /** 
  * Find group member object by member's uin

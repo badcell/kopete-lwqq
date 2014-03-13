@@ -1,6 +1,7 @@
 /*
-    webqqaddcontactpage.cpp - Kopete Webqq Protocol
+    webqqaddcontactpage.cpp - Kopete Webqq add Contact
 
+    Copyright (c) 2014      by Jun Zhang		 <jun.zhang@i-soft.com.cn>
     Copyright (c) 2003      by Will Stephenson		 <will@stevello.free-online.co.uk>
     Kopete    (c) 2002-2003 by the Kopete developers <kopete-devel@kde.org>
 
@@ -26,9 +27,14 @@
 #include "kopeteaccount.h"
 #include "kopetecontactlist.h"
 #include "kopetemetacontact.h"
-
+#include "kopetecontact.h"
+#include "kopetegroup.h"
+#include <kmessagebox.h>
+#include <kopeteuiglobal.h>
+#include "qq_types.h"
 #include "webqqcontact.h"
-
+#include "webqqaccount.h"
+static void qq_add_buddy(const char *username, const char *message);
 WebqqAddContactPage::WebqqAddContactPage( QWidget* parent )
 		: AddContactPage(parent)
 {
@@ -48,26 +54,32 @@ bool WebqqAddContactPage::apply( Kopete::Account* a, Kopete::MetaContact* m )
 {
 	if ( validateData() )
 	{
+        kDebug(WEBQQ_GEN_DEBUG);
 		QString name = m_webqqAddUI.m_uniqueName->text();
-
-		if ( a->addContact(name, m, Kopete::Account::ChangeKABC ) )
-		{
-			WebqqContact * newContact = qobject_cast<WebqqContact*>( Kopete::ContactList::self()->findContact( a->protocol()->pluginId(), a->accountId(), name ) );
-			if ( newContact )
-			{
-				newContact->setType( m_webqqAddUI.m_rbEcho->isChecked() ? WebqqContact::Echo : WebqqContact::Group );
-				return true;
-			}
-		}
-		else
-			return false;
+        WebqqAccount *acc = dynamic_cast< WebqqAccount *>(a);
+        QStringList groupNames;
+        Kopete::GroupList groupList = m->groups();
+        foreach(Kopete::Group *group, groupList)
+        {
+            if (group->type() == Kopete::Group::Normal)
+                groupNames += group->displayName();
+            else if (group->type() == Kopete::Group::TopLevel)
+                groupNames += QString();
+        }
+        acc->find_add_contact(name, (m_webqqAddUI.m_rbEcho->isChecked() ? WebqqAccount::Buddy : WebqqAccount::Group), groupNames.at(0));
 	}
 	return false;
 }
 
 bool WebqqAddContactPage::validateData()
 {
-    return true;
+    if(m_webqqAddUI.m_uniqueName->text().isEmpty())
+    {
+        QString message = i18n( "Please name ");
+        KMessageBox::queuedMessageBox(Kopete::UI::Global::mainWidget(), KMessageBox::Error, message);
+        return false;
+    }else
+        return true;
 }
 
 
